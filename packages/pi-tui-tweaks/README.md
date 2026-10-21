@@ -99,7 +99,7 @@ The table uses dotted paths for the nested JSON fields:
 | `tools.treeCorner`                   | `"rounded"` | `"rounded"` (╰), `"square"` (└); closing connector    |
 | `tools.indicator.style`              | `"circle"`  | `"dot"`, `"circle"`, `"diamond"`                      |
 | `tools.indicator.color`              | `"success"` | `"success"`, `"text"`, `"toolTitle"`                  |
-| `tools.expandedOutputLimit`          | `20`        | `-1`, `10`, `20`, `50`, `100`; `-1` means unlimited   |
+| `tools.expandedOutputLimit`          | `20`        | Any positive integer; `-1` means unlimited            |
 | `tools.collapsedOutputDisplay`       | `"preview"` | `"preview"`, `"summary"`                              |
 | `tools.showExpansionHint`            | `true`      | Show expand/collapse keybinding hints                 |
 | `editor.style`                       | `"rounded"` | `"native"`, `"compact"`, `"rounded"`                  |
@@ -159,7 +159,7 @@ The extension changes how read, write, edit, bash, ls, find, and grep look. Pi s
 
 Tool calls and output fit the available terminal width and adjust when you resize it. They follow Pi's `outputPad` setting, including changes made during a session.
 
-`tools.expandedOutputLimit` limits expanded ls/find/grep list items and generic custom-tool text lines. It defaults to `20`; `-1` means unlimited. Lists show the beginning and end with an omission marker between them; generic text shows the first lines. The limit counts logical items or lines, not wrapped screen rows, and does not cap Bash, Read, Write, Edit, Codemode, or expanded errors.
+`tools.expandedOutputLimit` limits expanded ls/find/grep list items and generic custom-tool text lines. It accepts any positive integer and defaults to `20`; `-1` means unlimited. Lists show the beginning and end with an omission marker between them, with odd limits giving the extra item to the beginning. A limit of `1` shows one beginning item. Generic text shows the first lines. The limit counts logical items or lines, not wrapped screen rows, and does not cap Bash, Read, Write, Edit, Codemode, or expanded errors.
 
 Rename `tools.maxExpandedEntries` to `tools.expandedOutputLimit` in existing settings before reloading to preserve your chosen limit. The old key is ignored; there is no alias or automatic migration.
 

@@ -213,6 +213,34 @@ describe("formatListResult", () => {
     expect(rendered.at(-1)).toContain("╰─ 25 files");
   });
 
+  it("handles small, odd, and larger-than-output limits without duplicating items", () => {
+    const items = Array.from({ length: 9 }, (_, index) => `file${index}.txt`);
+    for (const [limit, indices, hidden] of [
+      [1, [0], 8],
+      [2, [0, 8], 7],
+      [3, [0, 1, 8], 6],
+      [7, [0, 1, 2, 3, 6, 7, 8], 2],
+      [25, [0, 1, 2, 3, 4, 5, 6, 7, 8], 0],
+    ] as const) {
+      setTestConfig({ tools: { expandedOutputLimit: limit } });
+      const output = formatListResult(
+        { content: [{ type: "text", text: items.join("\n") }] },
+        resultStatusState(),
+        optsExpanded,
+        mkTheme(),
+        baseConfig,
+        80,
+      );
+      const rows = output.split("\n");
+      expect(
+        rows.filter((row) => row.startsWith("│  ")).map((row) => row.slice(3)),
+      ).toEqual(indices.map((index) => `file${index}.txt`));
+      if (hidden) expect(output).toContain(`┊  +${hidden} files`);
+      else expect(output).not.toContain("┊");
+      expect(rows.at(-1)).toContain("╰─ 9 files");
+    }
+  });
+
   it("renders every item when expandedOutputLimit is unlimited", () => {
     setTestConfig({
       tools: {

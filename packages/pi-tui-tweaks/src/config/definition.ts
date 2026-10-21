@@ -78,13 +78,7 @@ const ConfigSchema = Type.Object(
           { additionalProperties: false },
         ),
         expandedOutputLimit: Type.Union(
-          [
-            Type.Literal(-1),
-            Type.Literal(10),
-            Type.Literal(20),
-            Type.Literal(50),
-            Type.Literal(100),
-          ],
+          [Type.Literal(-1), Type.Integer({ minimum: 1 })],
           { default: 20 },
         ),
         collapsedOutputDisplay: Type.Union(

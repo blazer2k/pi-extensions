@@ -249,7 +249,7 @@ describe("public renderer integration", () => {
         capitalizeNames: false,
         capitalizeMetadata: false,
         treeCorner: "square",
-        expandedOutputLimit: 10,
+        expandedOutputLimit: 7,
         collapsedOutputDisplay: "summary",
         indicator: {
           ...initial.tools.indicator,

@@ -299,7 +299,7 @@ describe("config validation", () => {
               align: "center",
             },
             tools: {
-              expandedOutputLimit: 25,
+              expandedOutputLimit: 25.5,
             },
             editor: {
               showCost: false,
@@ -467,8 +467,23 @@ describe("config numeric values", () => {
     );
   });
 
-  it("accepts only configured expandedOutputLimit values", () => {
-    for (const value of [-1, 10, 20, 50, 100] as const) {
+  it("accepts positive integer expandedOutputLimit values and -1", () => {
+    for (const value of [
+      -1,
+      1,
+      2,
+      3,
+      7,
+      10,
+      20,
+      25,
+      50,
+      99,
+      100,
+      101,
+      1000,
+      Number.MAX_SAFE_INTEGER,
+    ]) {
       loadConfig(
         undefined,
         createStorage({
@@ -483,7 +498,22 @@ describe("config numeric values", () => {
       expect(getConfig().tools.expandedOutputLimit).toBe(value);
     }
 
-    for (const value of [0, 25, 99, 20.5, null, "20", "NaN", "Infinity"]) {
+    for (const value of [
+      0,
+      -2,
+      -20,
+      0.5,
+      20.5,
+      null,
+      "20",
+      "-1",
+      "NaN",
+      "Infinity",
+      true,
+      false,
+      [],
+      {},
+    ]) {
       loadConfig(
         undefined,
         createStorage({
@@ -498,6 +528,19 @@ describe("config numeric values", () => {
       expect(getConfig().tools.expandedOutputLimit).toBe(
         getDefaultConfig().tools.expandedOutputLimit,
       );
+    }
+  });
+
+  it("rejects non-finite limits without resetting valid siblings", () => {
+    for (const expandedOutputLimit of [NaN, Infinity, -Infinity]) {
+      expect(
+        validateConfig({
+          tools: { expandedOutputLimit, capitalizeNames: false },
+        }).tools,
+      ).toEqual({
+        ...getDefaultConfig().tools,
+        capitalizeNames: false,
+      });
     }
   });
 
