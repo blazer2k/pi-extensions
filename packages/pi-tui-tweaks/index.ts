@@ -56,9 +56,12 @@ export default function (pi: ExtensionAPI) {
       if (tools.enabled) uiHandles.push(registerTuiCapture(ctx));
       uiHandles.push(registerHeader(pi, ctx));
       if (getConfig().editor.style !== "native") {
-        uiHandles.push(registerEditor(pi, ctx));
-        if (getConfig().workingIndicator.style === "shimmer")
-          uiHandles.push(registerWorkingIndicator(pi, ctx));
+        const working =
+          getConfig().workingIndicator.style === "shimmer"
+            ? registerWorkingIndicator(pi, ctx)
+            : undefined;
+        if (working) uiHandles.push(working);
+        uiHandles.push(registerEditor(pi, ctx, working?.setStatusIndicator));
       }
       ctx.ui.setHiddenThinkingLabel("(think)");
       uiHandles.push({

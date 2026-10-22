@@ -1,15 +1,22 @@
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-  Theme,
+import {
+  keyText,
+  type ExtensionAPI,
+  type ExtensionContext,
+  type SessionBeforeCompactEvent,
+  type Theme,
 } from "@earendil-works/pi-coding-agent";
-import { mixColors, styleText } from "@earendil-works/pi-tui";
+import {
+  mixColors,
+  styleText,
+  Text,
+  truncateToWidth,
+} from "@earendil-works/pi-tui";
 import type { Config } from "../config/definition";
 import { getConfig } from "../config/store";
-import type { Handle } from "../shared/handle";
+import type { EditorStatusIndicator } from "../editor/frame";
 
-const LABEL = "Working";
-const INTERRUPT_MSG = "esc to interrupt";
+const WIDGET_KEY = "pi-tui-tweaks:working-status";
+type CompactionReason = SessionBeforeCompactEvent["reason"];
 
 // 10 FPS - position is wall-clock based, so sweep speed is unchanged;
 // this only coarsens sampling to keep long-session frame costs down
@@ -23,7 +30,8 @@ type WorkingIndicatorAssistantMessage = {
 type WorkingIndicatorSession = {
   start(): void;
   noteMessageEnd(message: WorkingIndicatorAssistantMessage | undefined): void;
-  noteCompaction(): void;
+  noteCompaction(reason: CompactionReason): void;
+  setStatusIndicator(indicator: EditorStatusIndicator | undefined): void;
   noteInput(): void;
   pauseForPrompt(): void;
   resumeAfterPrompt(): void;
@@ -50,8 +58,8 @@ function getRuntime(pi: ExtensionAPI): WorkingIndicatorRuntime {
       event.message as WorkingIndicatorAssistantMessage | undefined,
     );
   });
-  pi.on("session_before_compact", async () => {
-    runtime.current?.noteCompaction();
+  pi.on("session_before_compact", async (event) => {
+    runtime.current?.noteCompaction(event.reason);
   });
   pi.on("input", async () => {
     runtime.current?.noteInput();
@@ -119,10 +127,59 @@ export function assembleRunDuration(start: number): string {
 export function registerWorkingIndicator(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
-): Handle {
+) {
   const runtime = getRuntime(pi);
   let runStartTime = 0;
   let animTimer: ReturnType<typeof setInterval> | null = null;
+  let indicator: EditorStatusIndicator | undefined;
+  let editorFactory: ReturnType<ExtensionContext["ui"]["getEditorComponent"]>;
+  let compactionReason: CompactionReason | undefined;
+  let compactionStartedAt = 0;
+  let promptStartedAt = 0;
+  let requestRender = () => {};
+  let widgetOwned = false;
+  let disposed = false;
+  const compactionText = new Text("", 1, 0);
+
+  ctx.ui.setWidget(
+    WIDGET_KEY,
+    (tui) => {
+      widgetOwned = true;
+      requestRender = () => tui.requestRender();
+      return {
+        render(width) {
+          if (!indicator || disposed || width <= 0) return [];
+          if (ctx.ui.getEditorComponent() !== editorFactory) {
+            stopAnimation();
+            return [];
+          }
+          const compacting =
+            indicator.kind === "compaction" && compactionReason !== undefined;
+          // The widget container supplies the leading gap; retain the gap below the status.
+          return [
+            ...(compacting
+              ? compactionText.render(width)
+              : indicator.render(width).slice(1)),
+            "",
+          ].map((line) => truncateToWidth(line, width, ""));
+        },
+        invalidate() {
+          if (
+            indicator?.kind === "compaction" &&
+            compactionReason !== undefined
+          )
+            compactionText.setText(formatFrame());
+          indicator?.invalidate();
+        },
+        dispose() {
+          widgetOwned = false;
+          stopAnimation();
+          requestRender = () => {};
+        },
+      };
+    },
+    { placement: "aboveEditor" },
+  );
 
   function stopAnimation(): void {
     if (animTimer) {
@@ -137,65 +194,111 @@ export function registerWorkingIndicator(
     stopAnimation();
   }
 
-  function renderFrame(): void {
-    const cfg = getConfig();
-    const shimmered = shimmerText(
-      LABEL,
-      ctx.ui.theme,
-      cfg.workingIndicator.shimmerColor,
-    );
+  function formatFrame(): string {
+    const cfg = getConfig().workingIndicator;
+    const compacting =
+      indicator?.kind === "compaction" && compactionReason !== undefined;
+    const label = compacting
+      ? compactionReason === "manual"
+        ? "Compacting"
+        : "Auto-compacting"
+      : "Working";
+    const shimmered =
+      promptStartedAt > 0
+        ? ctx.ui.theme.fg("dim", label)
+        : shimmerText(label, ctx.ui.theme, cfg.shimmerColor);
+    const startedAt = compacting ? compactionStartedAt : runStartTime;
     const suffixParts: string[] = [];
-
-    if (runStartTime > 0 && cfg.workingIndicator.showDuration) {
-      suffixParts.push(assembleRunDuration(runStartTime));
+    if (startedAt > 0 && cfg.showDuration) {
+      const paused = promptStartedAt > 0 ? Date.now() - promptStartedAt : 0;
+      suffixParts.push(assembleRunDuration(startedAt + paused));
     }
-
-    if (cfg.workingIndicator.showInterruptHint) {
-      suffixParts.push(INTERRUPT_MSG);
-    }
-
-    const frames = [
+    const interrupt = keyText("app.interrupt");
+    if (cfg.showInterruptHint && interrupt)
+      suffixParts.push(
+        `${interrupt} to ${compacting ? "cancel" : "interrupt"}`,
+      );
+    const overflow =
+      compacting && compactionReason === "overflow"
+        ? ctx.ui.theme.fg("dim", "Context overflow detected, ")
+        : "";
+    return (
+      overflow +
       shimmered +
-        (suffixParts.length > 0
-          ? ctx.ui.theme.fg("dim", ` (${suffixParts.join(" · ")})`)
-          : ""),
-    ];
+      (suffixParts.length > 0
+        ? ctx.ui.theme.fg("dim", ` (${suffixParts.join(" · ")})`)
+        : "")
+    );
+  }
 
-    ctx.ui.setWorkingIndicator({
-      frames,
-      intervalMs: ANIM_INTERVAL_MS,
-    });
+  function renderFrame(): void {
+    if (disposed) return;
+    if (indicator && ctx.ui.getEditorComponent() !== editorFactory) {
+      stopAnimation();
+      return;
+    }
+    if (indicator?.kind === "compaction") {
+      compactionText.setText(formatFrame());
+    } else {
+      ctx.ui.setWorkingIndicator({
+        frames: [formatFrame()],
+        intervalMs: ANIM_INTERVAL_MS,
+      });
+    }
+    requestRender();
   }
 
   function startAnimation(): void {
-    // Always render immediately so a state change is visible even when
-    // the interval from a previous run is still active.
-    ctx.ui.setWorkingMessage("");
+    const compacting =
+      indicator?.kind === "compaction" && compactionReason !== undefined;
+    const working =
+      runStartTime > 0 && (!indicator || indicator.kind === "working");
+    if (
+      disposed ||
+      promptStartedAt > 0 ||
+      (indicator && ctx.ui.getEditorComponent() !== editorFactory) ||
+      (!compacting && !working)
+    ) {
+      stopAnimation();
+      requestRender();
+      return;
+    }
+    if (working) ctx.ui.setWorkingMessage("");
     renderFrame();
-    if (animTimer) return;
-    animTimer = setInterval(renderFrame, ANIM_INTERVAL_MS);
+    if (!animTimer) animTimer = setInterval(renderFrame, ANIM_INTERVAL_MS);
   }
 
   let compactionPending = false;
-  let promptStartedAt = 0;
   let lastStopReason: string | undefined;
 
   const session: WorkingIndicatorSession = {
     start() {
       // A compaction split continues the same task, so keep the original
       // start time and let the compaction gap count toward the total.
-      if (!compactionPending) runStartTime = Date.now();
+      if (!compactionPending || runStartTime === 0) runStartTime = Date.now();
       compactionPending = false;
       startAnimation();
     },
     noteMessageEnd(message) {
       if (message?.role === "assistant") lastStopReason = message.stopReason;
     },
-    noteCompaction() {
-      // A mid-run compaction sets this too, but the running timer is
-      // already correct; noteInput() clears any stale mark before the
-      // next task starts.
+    noteCompaction(reason) {
       compactionPending = true;
+      compactionReason = reason;
+      startAnimation();
+    },
+    setStatusIndicator(next) {
+      if (disposed) return;
+      if (next !== indicator) {
+        if (indicator?.kind === "compaction") {
+          compactionReason = undefined;
+          compactionStartedAt = 0;
+        }
+        indicator = next;
+        if (next?.kind === "compaction") compactionStartedAt = Date.now();
+      }
+      editorFactory = ctx.ui.getEditorComponent();
+      startAnimation();
     },
     noteInput() {
       // New user input starts a new task: drop task-bound state.
@@ -204,19 +307,26 @@ export function registerWorkingIndicator(
       lastStopReason = undefined;
     },
     pauseForPrompt() {
-      if (runStartTime === 0 || promptStartedAt > 0) return;
+      if (
+        (runStartTime === 0 && compactionStartedAt === 0) ||
+        promptStartedAt > 0
+      )
+        return;
       promptStartedAt = Date.now();
       stopIndicator();
+      if (indicator?.kind === "compaction" && compactionReason !== undefined) {
+        compactionText.setText(formatFrame());
+        requestRender();
+      }
     },
     resumeAfterPrompt() {
       if (promptStartedAt === 0) return;
 
       const promptDuration = Math.max(0, Date.now() - promptStartedAt);
       promptStartedAt = 0;
-      if (runStartTime === 0) return;
-
-      runStartTime += promptDuration;
-      startAnimation();
+      if (runStartTime > 0) runStartTime += promptDuration;
+      if (compactionStartedAt > 0) compactionStartedAt += promptDuration;
+      if (runStartTime > 0 || compactionStartedAt > 0) startAnimation();
     },
     settle() {
       // agent_settled fires only when no retry, compaction, or queued
@@ -237,12 +347,16 @@ export function registerWorkingIndicator(
       promptStartedAt = 0;
     },
     dispose() {
+      if (disposed) return;
+      disposed = true;
+      stopAnimation();
       if (runtime.current === session) {
         runtime.current = null;
+        ctx.ui.setWorkingMessage();
+        ctx.ui.setWorkingIndicator();
       }
-      stopAnimation();
-      ctx.ui.setWorkingMessage();
-      ctx.ui.setWorkingIndicator();
+      indicator = undefined;
+      if (widgetOwned) ctx.ui.setWidget(WIDGET_KEY, undefined);
     },
   };
 

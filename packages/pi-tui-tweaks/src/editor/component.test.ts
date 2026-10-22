@@ -43,6 +43,7 @@ afterEach(() => {
 function createEditor(
   command = "hello",
   style: "compact" | "rounded" = "rounded",
+  onStatusIndicator?: (indicator: EditorStatusIndicator | undefined) => void,
 ) {
   let dimFrameCalls = 0;
   const frameColors: string[] = [];
@@ -108,6 +109,7 @@ function createEditor(
       totalCost: 0.25,
     }),
     style,
+    onStatusIndicator,
   );
   editor.setText(command);
 
@@ -207,6 +209,26 @@ describe("EnhancedEditor", () => {
         expect(editor.render(80)[0]).not.toContain(label);
         expect(indicator.dispose).not.toHaveBeenCalled();
       }
+    }
+  });
+
+  it("hands standalone statuses to the shimmer controller without embedding or disposing them", () => {
+    for (const style of ["compact", "rounded"] as const) {
+      const onStatus = mock(
+        (_indicator: EditorStatusIndicator | undefined) => {},
+      );
+      const { editor } = createEditor("hello", style, onStatus);
+      const indicator = {
+        kind: "compaction",
+        dispose: mock(() => {}),
+      } as unknown as EditorStatusIndicator;
+      expect(editor.embedWorkingStatus).toBe(true);
+      editor.setWorkingStatusIndicator(indicator);
+      expect(onStatus).toHaveBeenLastCalledWith(indicator);
+      expect(editor.render(80).join("\n")).not.toContain("Compacting");
+      editor.setWorkingStatusIndicator(undefined);
+      expect(onStatus).toHaveBeenLastCalledWith(undefined);
+      expect(indicator.dispose).not.toHaveBeenCalled();
     }
   });
 

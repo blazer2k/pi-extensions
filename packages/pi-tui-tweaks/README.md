@@ -142,10 +142,14 @@ Compact and rounded use a footer for extension status messages. Native leaves bo
 
 `workingIndicator.style` applies only to compact and rounded editors:
 
-- `shimmer` (default): The current standalone animated "Working" label, with optional elapsed time, interrupt hint, and completion duration. `workingIndicator.showInterruptHint` and `workingIndicator.showDuration` apply only to this style.
+- `shimmer` (default): Standalone animated `Working`, `Compacting`, and `Auto-compacting` labels. The same color, elapsed-time, and interrupt-hint settings apply to all three.
 - `native`: Pi's own indicator in the top border, with status on the left and directory/branch on the right. Pi manages its animation, lifecycle, retry, compaction, and branch-summary statuses. Narrow layouts shorten metadata or show only the spinner; compact scroll counts remain centered when space allows.
 
 `workingIndicator.shimmerColor` selects the shimmer highlight: `"accent"` (default), `"success"`, or `"text"` from Pi's theme. The muted base, animation, dim duration and interrupt hint stay unchanged. Outside truecolor mode, the label remains static dim text. Native Working indicators ignore this setting.
+
+Shimmer statuses share one above-editor widget. Retry and branch-summary statuses keep Pi's text, colors, and animation in that widget. Its order relative to other extensions' widgets follows extension load order.
+
+Compaction shows its own elapsed time and preserves the context-overflow notice. Interrupt hints follow Pi's configured cancellation key. Prompt waits are excluded from elapsed time. Automatic compaction still counts toward the total shown by the final `Worked for...` notification; there is no extra compaction notification. Pi continues to own compaction execution, cancellation, and native indicator cleanup. When attaching to an existing compaction without its reason, the native display is retained.
 
 With `editor.style: "native"`, all `workingIndicator` settings are ignored. Pi's editor and indicator remain untouched. Change styles through the settings file and `/reload`.
 

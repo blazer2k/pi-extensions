@@ -369,7 +369,9 @@ describe("public renderer integration", () => {
       });
       expect(
         setWidget.mock.calls.filter(
-          ([, content]) => typeof content === "function",
+          ([key, content]) =>
+            key === "pi-tui-tweaks:tui-capture" &&
+            typeof content === "function",
         ),
       ).toHaveLength(enabled ? 1 : 0);
       expect(
@@ -452,6 +454,7 @@ describe("public renderer integration", () => {
       embedWorkingStatus: true,
     });
     native.setText("draft 界 input");
+    native.onEscape = () => {};
     const nativeFooter = new FooterComponent(session, footerData);
     const host = Object.assign(Object.create(InteractiveMode.prototype), {
       ui: tui,
@@ -461,12 +464,19 @@ describe("public renderer integration", () => {
       editorContainer: new Container(),
       footerContainer: new Container(),
       statusContainer: new Container(),
+      widgetContainerAbove: new Container(),
+      widgetContainerBelow: new Container(),
+      extensionWidgetsAbove: new Map(),
+      extensionWidgetsBelow: new Map(),
       footer: nativeFooter,
       footerDataProvider: footerData,
       options: { tuiMode: "regular" },
       defaultWorkingMessage: "Native Working",
       isInitialized: true,
       programStatus: { handleEvent() {} },
+      compactionQueuedMessages: [],
+      showError() {},
+      showStatus() {},
       disposeActiveSelector() {},
     });
     host.editorContainer.addChild(native);
@@ -482,7 +492,8 @@ describe("public renderer integration", () => {
           `\x1b[38;5;${token === "muted" ? 246 : 244}m${value}\x1b[39m`,
       },
       setHeader() {},
-      setWidget() {},
+      setWidget: (...args: Parameters<ExtensionUIContext["setWidget"]>) =>
+        host.setExtensionWidget(...args),
       setHiddenThinkingLabel() {},
       setEditorComponent: (
         factory: Parameters<ExtensionUIContext["setEditorComponent"]>[0],
@@ -498,9 +509,10 @@ describe("public renderer integration", () => {
       },
       setWorkingMessage(message?: string) {
         host.workingMessage = message;
-        host.activeStatusIndicator?.setMessage(
-          message ?? host.defaultWorkingMessage,
-        );
+        if (host.activeStatusIndicator?.kind === "working")
+          host.activeStatusIndicator.setMessage(
+            message ?? host.defaultWorkingMessage,
+          );
       },
       notify: (message: string) => errors.push(message),
     } as unknown as ExtensionUIContext;
@@ -577,7 +589,7 @@ describe("public renderer integration", () => {
           expect(host.workingIndicatorOptions).toBeUndefined();
         } else {
           expect(host.editor).not.toBe(native);
-          expect(host.editor.embedWorkingStatus).toBe(embedded);
+          expect(host.editor.embedWorkingStatus).toBe(true);
           expect(host.footerContainer.render(80).map(stripAnsi)).toEqual([
             "",
             "offline status",
@@ -606,7 +618,10 @@ describe("public renderer integration", () => {
             expect(top).toContain("\x1b[38;5;246mNative Working\x1b[39m");
           expect(host.activeStatusIndicator).toBe(indicator);
         } else {
-          expect(host.statusContainer.children).toHaveLength(1);
+          expect(host.statusContainer.children).toHaveLength(0);
+          expect(
+            host.widgetContainerAbove.render(80).map(stripAnsi).join("\n"),
+          ).toContain("Working");
           expect(stripAnsi(host.editor.render(80)[0]!)).not.toContain(
             "Working",
           );
@@ -622,7 +637,7 @@ describe("public renderer integration", () => {
         expect(host.editor.render(120).map(stripAnsi).join("\n")).not.toContain(
           "Working",
         );
-        if (embedded) {
+        {
           for (const [event, kind, label] of [
             [
               {
@@ -650,15 +665,41 @@ describe("public renderer integration", () => {
             ],
           ] as const) {
             const optionsBefore = workingOptions.length;
+            const escapeBefore = host.defaultEditor.onEscape;
             await host.handleEvent(event);
             const indicator = host.activeStatusIndicator;
             expect(indicator.kind).toBe(kind);
+            const nativeBefore = indicator.render(120);
             expect(host.statusContainer.children).toHaveLength(0);
+            if (!embedded && kind === "compaction") {
+              expect(
+                host.widgetContainerAbove.render(120).map(stripAnsi).join("\n"),
+              ).toContain("Compacting context...");
+              await session.extensionRunner.emit({
+                type: "session_before_compact",
+                reason: "manual",
+                preparation: {} as never,
+                branchEntries: [],
+                signal: new AbortController().signal,
+                willRetry: false,
+              });
+              expect(indicator.render(120)).toEqual(nativeBefore);
+            }
             if (kind === "compaction" && editorStyle !== "native")
               host.updateEditorBorderColor();
-            const top = host.editor.render(120)[0]!;
+            const top = embedded
+              ? host.editor.render(120)[0]!
+              : host.widgetContainerAbove.render(120).join("\n");
             expect(stripAnsi(top)).toContain(label);
-            if (kind === "compaction" && editorStyle !== "native")
+            if (!embedded) {
+              expect(stripAnsi(host.editor.render(120)[0]!)).not.toContain(
+                label,
+              );
+              if (kind === "compaction")
+                expect(stripAnsi(top)).not.toContain("Compacting context...");
+              else expect(top).toContain(nativeBefore.slice(1).join("\n"));
+            }
+            if (kind === "compaction" && editorStyle !== "native" && embedded)
               expect(top).toContain(`\x1b[38;5;246m${label}`);
             expect(host.activeStatusIndicator).toBe(indicator);
             const input = host.editor.getText();
@@ -675,8 +716,26 @@ describe("public renderer integration", () => {
             }
             host.editor.setText(input);
             expect(workingOptions).toHaveLength(optionsBefore);
-            host.clearStatusIndicator(kind);
+            const disposed = spyOn(indicator, "dispose");
+            if (kind === "compaction") {
+              const abort = spyOn(session, "abortCompaction");
+              host.editor.onEscape();
+              expect(abort).toHaveBeenCalledTimes(1);
+              abort.mockRestore();
+              await host.handleEvent({
+                type: "compaction_end",
+                reason: "manual",
+                aborted: true,
+                willRetry: false,
+              });
+              expect(host.defaultEditor.onEscape).toBe(escapeBefore);
+            } else host.clearStatusIndicator(kind);
+            expect(disposed).toHaveBeenCalledTimes(1);
+            disposed.mockRestore();
             expect(stripAnsi(host.editor.render(120)[0]!)).not.toContain(label);
+            expect(
+              host.widgetContainerAbove.render(120).map(stripAnsi).join("\n"),
+            ).not.toContain(label);
           }
         }
       }

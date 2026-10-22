@@ -34,21 +34,28 @@ export class EnhancedEditor extends CustomEditor {
     private readonly getGitBranch: () => string | null,
     private readonly getCurrentUsage: () => SessionUsage,
     private readonly style: Exclude<Config["editor"]["style"], "native">,
+    private readonly onStatusIndicator?: (
+      indicator: EditorStatusIndicator | undefined,
+    ) => void,
   ) {
     super(tui, theme, kb, {
       paddingX: style === "rounded" ? 0 : 1,
-      embedWorkingStatus: getConfig().workingIndicator.style === "native",
+      embedWorkingStatus:
+        onStatusIndicator !== undefined ||
+        getConfig().workingIndicator.style === "native",
     });
   }
 
   override setWorkingStatusIndicator(
     indicator: EditorStatusIndicator | undefined,
   ): void {
-    // Our final frame draws the indicator; keep Pi's intermediate border plain.
+    // Keep Pi's intermediate border plain; we place the status ourselves.
     super.setWorkingStatusIndicator(undefined);
-    this.nativeStatusIndicator = this.embedWorkingStatus
-      ? indicator
-      : undefined;
+    this.nativeStatusIndicator =
+      this.embedWorkingStatus && !this.onStatusIndicator
+        ? indicator
+        : undefined;
+    this.onStatusIndicator?.(indicator);
   }
 
   private buildFrameData(config: Config) {

@@ -5,7 +5,7 @@ import type {
 import type { Handle } from "../shared/handle";
 import { getConfig } from "../config/store";
 import { EnhancedEditor } from "./component";
-import { formatStatusLine } from "./frame";
+import { formatStatusLine, type EditorStatusIndicator } from "./frame";
 import { getTotalUsage } from "./usage";
 
 type EditorRuntime = {
@@ -30,6 +30,7 @@ function getRuntime(pi: ExtensionAPI): EditorRuntime {
 export function registerEditor(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
+  onStatusIndicator?: (indicator: EditorStatusIndicator | undefined) => void,
 ): Handle {
   const style = getConfig().editor.style;
   if (style === "native") return { dispose() {} };
@@ -82,6 +83,7 @@ export function registerEditor(
       () => getGitBranch(),
       () => cachedUsage,
       style,
+      onStatusIndicator,
     );
   };
 

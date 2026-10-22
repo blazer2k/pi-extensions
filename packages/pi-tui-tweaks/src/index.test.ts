@@ -358,7 +358,10 @@ describe("extension lifecycle", () => {
       for (let session = 0; session < 2; session++) {
         await pi._handlers.session_start![0]!({}, ctx);
         expect(isFullscreenTui()).toBe(true);
-        expect(widgets.size).toBe(1);
+        expect([...widgets.keys()]).toEqual([
+          "pi-tui-tweaks:tui-capture",
+          "pi-tui-tweaks:working-status",
+        ]);
         await pi._handlers.session_shutdown![0]!({});
         expect(widgets.size).toBe(0);
         expect(isFullscreenTui()).toBe(false);

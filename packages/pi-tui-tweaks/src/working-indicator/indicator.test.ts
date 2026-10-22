@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   createExtensionRuntime,
   ExtensionRunner,
@@ -11,11 +11,31 @@ import {
   indexedColor,
   oklchColor,
   rgbColor,
+  getKeybindings,
+  setKeybindings,
+  KeybindingsManager,
+  Text,
+  visibleWidth,
+  type Component,
+  type TUI,
   type Color as ThemeColor,
 } from "@earendil-works/pi-tui";
 import { assembleRunDuration, registerWorkingIndicator } from "./indicator";
 import { getConfig } from "../config/store";
 import { setTestConfig } from "../testing/helpers";
+import type { EditorStatusIndicator } from "../editor/frame";
+import { stripAnsi } from "../tools/rendering/text";
+
+let previousKeybindings: ReturnType<typeof getKeybindings>;
+beforeEach(() => {
+  previousKeybindings = getKeybindings();
+  setKeybindings(
+    new KeybindingsManager({
+      "app.interrupt": { defaultKeys: "escape", description: "Cancel" },
+    }),
+  );
+});
+afterEach(() => setKeybindings(previousKeybindings));
 
 function mkIndicatorHarness(colors?: {
   muted: ThemeColor;
@@ -34,8 +54,17 @@ function mkIndicatorHarness(colors?: {
   let notifyCount = 0;
   let lastFrames: string[] | null = null;
   let lastIntervalMs: number | undefined;
+  let widget: (Component & { dispose?(): void }) | undefined;
   const ctx = {
     ui: {
+      getEditorComponent: () => undefined,
+      setWidget: (_key: string, content: unknown) => {
+        widget?.dispose?.();
+        widget =
+          typeof content === "function"
+            ? content({ requestRender() {} } as TUI)
+            : undefined;
+      },
       setWorkingIndicator: (options?: {
         frames: string[];
         intervalMs?: number;
@@ -63,6 +92,11 @@ function mkIndicatorHarness(colors?: {
     getNotifyCount: () => notifyCount,
     getLastFrames: () => lastFrames,
     getLastIntervalMs: () => lastIntervalMs,
+    renderStatus: (width = 120) => {
+      widget?.invalidate();
+      return widget?.render(width) ?? [];
+    },
+    hasWidget: () => widget !== undefined,
   };
 }
 
@@ -92,7 +126,7 @@ describe("working indicator rendering", () => {
     const handle = registerWorkingIndicator(pi, ctx);
     try {
       handlers.agent_start![0]!();
-      expect(getLastFrames()![0]).toBe("Working (0s · esc to interrupt)");
+      expect(getLastFrames()![0]).toBe("Working (0s · escape to interrupt)");
     } finally {
       handle.dispose();
       clock.restore();
@@ -127,7 +161,7 @@ describe("working indicator rendering", () => {
         handlers.agent_start![0]!();
         const frame = getLastFrames()![0]!;
         expect(frame).toStartWith(`\x1b[38;2;${r};${g};${b}mW\x1b[39m`);
-        expect(frame).toEndWith("[dim] (0s · esc to interrupt)");
+        expect(frame).toEndWith("[dim] (0s · escape to interrupt)");
       }
     } finally {
       handle.dispose();
@@ -459,6 +493,248 @@ describe("working indicator across UI prompts", () => {
 
     expect(getLastFrames()).toEqual([]);
     handle.dispose();
+  });
+});
+
+function suppliedStatus(kind: EditorStatusIndicator["kind"]) {
+  const text = new Text(`Native ${kind}`, 1, 0);
+  return {
+    kind,
+    render: (width: number) => ["", ...text.render(width)],
+    invalidate() {},
+    setMessage: mock(() => {}),
+    setIndicator: mock(() => {}),
+    stop: mock(() => {}),
+    dispose: mock(() => {}),
+  } as unknown as EditorStatusIndicator;
+}
+
+describe("shimmer compaction status", () => {
+  let previous: ReturnType<typeof getConfig>;
+  beforeEach(() => {
+    previous = getConfig();
+    setTestConfig({
+      workingIndicator: { showDuration: true, showInterruptHint: true },
+    });
+  });
+  afterEach(() => setTestConfig(previous));
+
+  for (const [reason, label] of [
+    ["manual", "Compacting"],
+    ["threshold", "Auto-compacting"],
+    ["overflow", "Auto-compacting"],
+  ] as const) {
+    it(`renders ${reason} compaction while idle without changing Pi's indicator`, () => {
+      const harness = mkIndicatorHarness();
+      const clock = installFakeClock();
+      const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+      const indicator = suppliedStatus("compaction");
+      try {
+        handle.setStatusIndicator(indicator);
+        expect(harness.renderStatus().join("\n")).toContain(
+          "Native compaction",
+        );
+        clock.advance(1_100);
+        harness.handlers.session_before_compact![0]!({ reason });
+        const text = harness.renderStatus().join("\n");
+        expect(text).toContain(`${label} (1s · escape to cancel)`);
+        expect(text.includes("Context overflow detected, ")).toBe(
+          reason === "overflow",
+        );
+        expect(harness.getLastFrames()).toBeNull();
+        for (const width of [0, 1, 2, 8, 24, 80])
+          expect(
+            harness
+              .renderStatus(width)
+              .every((row) => visibleWidth(row) <= width),
+          ).toBe(true);
+        handle.setStatusIndicator(undefined);
+        expect(harness.renderStatus()).toEqual([]);
+        expect(harness.getNotifyCount()).toBe(0);
+      } finally {
+        handle.dispose();
+        clock.restore();
+      }
+      expect(harness.hasWidget()).toBe(false);
+      for (const method of [
+        indicator.setMessage,
+        indicator.setIndicator,
+        indicator.stop,
+        indicator.dispose,
+      ])
+        expect(method).not.toHaveBeenCalled();
+    });
+  }
+
+  it("keeps task time across compaction and excludes prompt waits from both clocks", () => {
+    const harness = mkIndicatorHarness();
+    const clock = installFakeClock();
+    const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+    try {
+      harness.handlers.agent_start![0]!();
+      clock.advance(1_100);
+      handle.setStatusIndicator(suppliedStatus("compaction"));
+      harness.handlers.session_before_compact![0]!({ reason: "threshold" });
+      clock.advance(2_100);
+      harness.handlers.ui_prompt_start![0]!();
+      clock.advance(5_000);
+      expect(harness.renderStatus().join("\n")).toContain(
+        "Auto-compacting (2s",
+      );
+      harness.handlers.ui_prompt_end![0]!();
+      handle.setStatusIndicator(undefined);
+      handle.setStatusIndicator(suppliedStatus("working"));
+      harness.handlers.agent_start![0]!();
+      expect(harness.getLastFrames()![0]).toContain("Working (3s");
+      clock.advance(1_100);
+      emitAssistantMessageEnd(harness.handlers, "stop");
+      harness.handlers.agent_settled![0]!();
+      expect(harness.getNotifyCount()).toBe(1);
+    } finally {
+      handle.dispose();
+      clock.restore();
+    }
+  });
+
+  it("starts a fresh Working clock after an idle manual compaction without an input event", () => {
+    const harness = mkIndicatorHarness();
+    const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+    try {
+      handle.setStatusIndicator(suppliedStatus("compaction"));
+      harness.handlers.session_before_compact![0]!({ reason: "manual" });
+      handle.setStatusIndicator(undefined);
+      handle.setStatusIndicator(suppliedStatus("working"));
+      harness.handlers.agent_start![0]!();
+      expect(harness.getLastFrames()![0]).toContain("Working (0s");
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  it("uses current colors, shared flags, and remapped or unbound cancel keys", () => {
+    const harness = mkIndicatorHarness({
+      muted: rgbColor(10, 20, 30),
+      accent: rgbColor(100, 150, 200),
+      success: rgbColor(20, 220, 60),
+    });
+    const clock = installFakeClock(11_000);
+    const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+    try {
+      handle.setStatusIndicator(suppliedStatus("compaction"));
+      harness.handlers.session_before_compact![0]!({ reason: "manual" });
+      getKeybindings().setUserBindings({ "app.interrupt": "ctrl+k" });
+      const first = harness.renderStatus().join("\n");
+      expect(stripAnsi(first)).toContain("Compacting (0s · ctrl+k to cancel)");
+      setTestConfig({
+        workingIndicator: {
+          shimmerColor: "success",
+          showDuration: false,
+          showInterruptHint: false,
+        },
+      });
+      const second = harness.renderStatus().join("\n");
+      expect(second).not.toBe(first);
+      expect(stripAnsi(second).trim()).toBe("Compacting");
+      setTestConfig({ workingIndicator: { showInterruptHint: true } });
+      getKeybindings().setUserBindings({ "app.interrupt": [] });
+      expect(stripAnsi(harness.renderStatus().join("\n")).trim()).toBe(
+        "Compacting",
+      );
+      harness.ctx.ui.theme.getColorMode = () => "256color";
+      Object.defineProperty(harness.ctx.ui.theme, "colors", {
+        get() {
+          throw new Error("No colors needed outside truecolor");
+        },
+      });
+      expect(stripAnsi(harness.renderStatus().join("\n")).trim()).toBe(
+        "Compacting",
+      );
+    } finally {
+      handle.dispose();
+      clock.restore();
+    }
+  });
+
+  it("passes retry, branch summary, and compaction without a reason through unchanged", () => {
+    const harness = mkIndicatorHarness();
+    const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+    try {
+      for (const kind of ["retry", "branchSummary", "compaction"] as const) {
+        const indicator = suppliedStatus(kind);
+        handle.setStatusIndicator(indicator);
+        expect(harness.renderStatus()).toEqual([
+          ...indicator.render(120).slice(1),
+          "",
+        ]);
+        expect(indicator.setIndicator).not.toHaveBeenCalled();
+        expect(indicator.dispose).not.toHaveBeenCalled();
+      }
+    } finally {
+      handle.dispose();
+    }
+  });
+
+  it("keeps at most one extension timer and leaves a replacement editor alone", () => {
+    const originalSetInterval = globalThis.setInterval;
+    const originalClearInterval = globalThis.clearInterval;
+    const active = new Set<unknown>();
+    globalThis.setInterval = (() => {
+      const timer = {};
+      active.add(timer);
+      expect(active.size).toBeLessThanOrEqual(1);
+      return timer;
+    }) as unknown as typeof setInterval;
+    globalThis.clearInterval = ((timer: unknown) => {
+      active.delete(timer);
+    }) as typeof clearInterval;
+    const harness = mkIndicatorHarness();
+    const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+    const compaction = suppliedStatus("compaction");
+    try {
+      harness.handlers.agent_start![0]!();
+      expect(active.size).toBe(1);
+      handle.setStatusIndicator(compaction);
+      expect(active.size).toBe(0);
+      harness.handlers.session_before_compact![0]!({ reason: "manual" });
+      expect(active.size).toBe(1);
+      handle.setStatusIndicator(suppliedStatus("retry"));
+      expect(active.size).toBe(0);
+      handle.setStatusIndicator(compaction);
+      harness.handlers.session_before_compact![0]!({ reason: "manual" });
+      harness.ctx.ui.getEditorComponent = () => () => ({}) as never;
+      expect(harness.renderStatus()).toEqual([]);
+      expect(active.size).toBe(0);
+      expect(compaction.dispose).not.toHaveBeenCalled();
+    } finally {
+      handle.dispose();
+      globalThis.setInterval = originalSetInterval;
+      globalThis.clearInterval = originalClearInterval;
+    }
+    expect(active.size).toBe(0);
+  });
+
+  it("cleans up idempotently without an old session clearing its replacement widget", () => {
+    const harness = mkIndicatorHarness();
+    const first = registerWorkingIndicator(harness.pi, harness.ctx);
+    const indicator = suppliedStatus("compaction");
+    first.setStatusIndicator(indicator);
+    harness.handlers.session_before_compact![0]!({ reason: "manual" });
+    expect(harness.renderStatus().join("\n")).toContain("Compacting");
+    const second = registerWorkingIndicator(harness.pi, harness.ctx);
+    try {
+      second.setStatusIndicator(indicator);
+      expect(harness.renderStatus().join("\n")).toContain("Native compaction");
+      second.setStatusIndicator(suppliedStatus("compaction"));
+      harness.handlers.session_before_compact![0]!({ reason: "manual" });
+      first.dispose();
+      expect(harness.renderStatus().join("\n")).toContain("Compacting");
+      expect(harness.hasWidget()).toBe(true);
+    } finally {
+      first.dispose();
+      second.dispose();
+      second.dispose();
+    }
+    expect(harness.hasWidget()).toBe(false);
   });
 });
 
