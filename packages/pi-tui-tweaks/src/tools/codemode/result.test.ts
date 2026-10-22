@@ -1,8 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Worker } from "node:worker_threads";
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { Container, Text, visibleWidth } from "@earendil-works/pi-tui";
 import {
   initTheme,
@@ -59,23 +58,7 @@ function setup(
       { ...definition, ...renderers },
       { isToolCallActive, reportIssue },
     ),
-    async execute(...args: Parameters<ToolDefinition["execute"]>) {
-      const exits: Promise<number>[] = [];
-      const terminate = Worker.prototype.terminate;
-      const observed = spyOn(Worker.prototype, "terminate").mockImplementation(
-        function (this: Worker) {
-          const exited = terminate.call(this);
-          exits.push(exited);
-          return exited;
-        },
-      );
-      try {
-        return await definition.execute(...args);
-      } finally {
-        observed.mockRestore();
-        await Promise.all(exits);
-      }
-    },
+    execute: definition.execute,
   };
 }
 function result(
