@@ -114,6 +114,8 @@ Compact editor with `editor.color: "thinking"`, square tool-tree connectors, and
 
 ## Compatibility
 
+Tested with Pi `1.4.0`.
+
 Tools that draw their entire tool-call block keep their own layout.
 
 Compact and rounded styles replace Pi's editor and footer. Pi supports one custom editor and one custom footer at a time, so other extensions that replace either component can conflict.

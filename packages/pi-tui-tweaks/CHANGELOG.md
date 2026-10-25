@@ -2,7 +2,7 @@
 
 The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
-## [Unreleased]
+## 0.2.0 - 2026-10-25
 
 **Breaking changes**
 
@@ -52,5 +52,4 @@ The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 - A `/ui` settings menu, persistent JSON configuration, and the `PI_UI_ENHANCEMENTS_CONFIG_PATH` override.
 - Optional capitalization of custom-tool labels.
 
-[Unreleased]: https://github.com/blazer2k/pi-extensions/compare/a214f3c1c365f2f5b5775f73ac9937abbf5b9d3c...HEAD
 [0.1.0]: https://github.com/blazer2k/pi-extensions/tree/a214f3c1c365f2f5b5775f73ac9937abbf5b9d3c/packages/pi-ui-enhancements

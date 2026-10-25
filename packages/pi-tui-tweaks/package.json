@@ -1,6 +1,6 @@
 {
   "name": "@blazer2k/pi-tui-tweaks",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Configurable editor, header, status, and compact tool rendering for Pi's interactive TUI.",
   "type": "module",
   "keywords": [
