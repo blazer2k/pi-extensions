@@ -33,6 +33,7 @@ The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
 **Fixed**
 
+- Compact editor autocomplete stays above the bottom rule, with mouse selection aligned to the displayed suggestions.
 - Preserved ANSI colors, tree prefixes, and blank lines when wrapping and truncating tool output.
 - Completed Bash and Codemode calls use Pi's recorded durations, including when reopening sessions.
 - Working duration includes automatic compaction and excludes time spent waiting for UI prompts.

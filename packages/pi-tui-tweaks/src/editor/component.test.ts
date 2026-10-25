@@ -125,6 +125,41 @@ function createEditor(
   };
 }
 
+const slashCommands: AutocompleteProvider = {
+  async getSuggestions() {
+    return {
+      prefix: "/se",
+      items: [
+        { value: "/settings", label: "settings", description: "Open settings" },
+        {
+          value: "/session",
+          label: "session",
+          description: "Show session info",
+        },
+        {
+          value: "/model",
+          label: "model",
+          description: "Select model",
+        },
+        {
+          value: "/scoped-models",
+          label: "scoped-models",
+          description: "Cycle models",
+        },
+        { value: "/share", label: "share", description: "Share session" },
+        {
+          value: "/tree",
+          label: "tree",
+          description: "Navigate session tree",
+        },
+      ],
+    };
+  },
+  applyCompletion(_lines, _line, _col, item) {
+    return { lines: [item.value], cursorLine: 0, cursorCol: item.value.length };
+  },
+};
+
 describe("EnhancedEditor", () => {
   it("assembles status content with the default dim frame and cost", () => {
     const { editor, getDimFrameCalls, getThinkingBorderCalls } = createEditor();
@@ -301,34 +336,130 @@ describe("EnhancedEditor", () => {
     }
   });
 
-  it("keeps compact autocomplete below the lower rule and preserves native completion", async () => {
-    const { editor, native } = createEditor("/h", "compact");
-    native.setText("/h");
-    const provider: AutocompleteProvider = {
-      async getSuggestions() {
-        return { prefix: "/h", items: [{ value: "/hello", label: "/hello" }] };
-      },
-      applyCompletion() {
-        return { lines: ["/hello"], cursorLine: 0, cursorCol: 6 };
-      },
-    };
+  it("keeps compact autocomplete above the lower rule and preserves native completion", async () => {
+    const { editor, native } = createEditor("/se", "compact");
+    native.setText("/se");
     for (const instance of [editor, native]) {
-      instance.setAutocompleteProvider(provider);
+      instance.setAutocompleteProvider(slashCommands);
       instance.focused = true;
       instance.handleInput("\t");
     }
     await Bun.sleep(0);
     expect(editor.isShowingAutocomplete()).toBe(true);
-    expect(editor.render(80).slice(1, 2)).toEqual(
-      native.render(80).slice(1, 2),
-    );
-    expect(editor.render(80).slice(3)).toEqual(native.render(80).slice(3));
-    expect(stripAnsi(editor.render(80)[2]!)).toContain("test-model");
-    editor.handleInput("\t");
-    native.handleInput("\t");
-    expect(editor.getText()).toBe("/hello");
+    for (const width of [4, 8, 20, 40, 88, 120]) {
+      const expected = native.render(width);
+      const actual = editor.render(width);
+      const lowerRule = expected.findLastIndex(
+        (line) => stripAnsi(line) === "─".repeat(width),
+      );
+      expect(lowerRule).toBeGreaterThan(0);
+      expect(actual.slice(1, lowerRule)).toEqual(expected.slice(1, lowerRule));
+      expect(actual.slice(lowerRule, -1)).toEqual(
+        expected.slice(lowerRule + 1),
+      );
+      if (width >= 40)
+        expect(stripAnsi(actual.at(-1)!)).toContain("test-model");
+      for (const line of actual)
+        expect(visibleWidth(line)).toBeLessThanOrEqual(width);
+    }
+    for (const instance of [editor, native]) {
+      instance.handleInput("\x1b[B");
+      instance.handleInput("\t");
+    }
+    expect(editor.getText()).toBe("/session");
     expect(editor.getText()).toBe(native.getText());
     expect(editor.isShowingAutocomplete()).toBe(false);
+    expect(editor.render(88)).toHaveLength(3);
+  });
+
+  it("keeps autocomplete inside the compact frame while input is scrolled", async () => {
+    const text =
+      Array.from({ length: 20 }, (_, index) => `draft line ${index}`).join(
+        "\n",
+      ) + "\n/se";
+    const { editor, native } = createEditor(text, "compact");
+    native.setText(text);
+    for (const instance of [editor, native]) {
+      instance.setAutocompleteProvider(slashCommands);
+      instance.handleInput("\t");
+    }
+    await Bun.sleep(0);
+    expect(editor.isShowingAutocomplete()).toBe(true);
+    const expected = native.render(88);
+    const actual = editor.render(88);
+    const lowerRule = expected.findLastIndex(
+      (line) => stripAnsi(line) === "─".repeat(88),
+    );
+    expect(stripAnsi(actual[0]!)).toMatch(/↑ \d+ more/);
+    expect(actual.slice(1, lowerRule)).toEqual(expected.slice(1, lowerRule));
+    expect(actual.slice(lowerRule, -1)).toEqual(expected.slice(lowerRule + 1));
+    expect(stripAnsi(actual.at(-2)!)).toContain("(1/6)");
+    expect(stripAnsi(actual.at(-1)!)).toContain("test-model");
+  });
+
+  it("routes mouse clicks and wheel selection to the shifted compact autocomplete rows", async () => {
+    for (const index of [0, 1]) {
+      const { editor } = createEditor("/se", "compact");
+      editor.setAutocompleteProvider(slashCommands);
+      editor.handleInput("\t");
+      await Bun.sleep(0);
+      const lines = editor.render(88);
+      expect(stripAnsi(lines[2]!)).toContain("settings");
+      const event = {
+        type: "click" as const,
+        button: "left" as const,
+        x: 4,
+        y: 2 + index,
+        screenX: 4,
+        screenY: 2 + index,
+        width: 88,
+        height: lines.length,
+        shift: false,
+        alt: false,
+        ctrl: false,
+      };
+      if (index === 0) {
+        editor.handleMouse({
+          ...event,
+          type: "wheel",
+          button: "none",
+          wheelDelta: 1,
+        });
+        expect(stripAnsi(editor.render(88)[3]!)).toContain("→ session");
+      }
+      editor.handleMouse({ ...event, type: "press" });
+      editor.render(88);
+      editor.handleMouse(event);
+      expect(editor.getText()).toBe(index === 0 ? "/settings" : "/session");
+      expect(editor.isShowingAutocomplete()).toBe(false);
+    }
+  });
+
+  it("dismisses compact autocomplete without treating its bottom rule as a suggestion", async () => {
+    const { editor } = createEditor("/se", "compact");
+    editor.setAutocompleteProvider(slashCommands);
+    editor.handleInput("\t");
+    await Bun.sleep(0);
+    const lines = editor.render(88);
+    editor.handleMouse({
+      type: "click",
+      button: "left",
+      x: 4,
+      y: lines.length - 1,
+      screenX: 4,
+      screenY: lines.length - 1,
+      width: 88,
+      height: lines.length,
+      shift: false,
+      alt: false,
+      ctrl: false,
+    });
+    expect(editor.getText()).toBe("/se");
+    expect(editor.isShowingAutocomplete()).toBe(true);
+    editor.handleInput("\x1b");
+    expect(editor.isShowingAutocomplete()).toBe(false);
+    expect(editor.render(88)).toHaveLength(3);
+    expect(stripAnsi(editor.render(88).at(-1)!)).toContain("test-model");
   });
 
   it("embeds supplied native statuses without changing input, scrolling, autocomplete, or ownership", async () => {

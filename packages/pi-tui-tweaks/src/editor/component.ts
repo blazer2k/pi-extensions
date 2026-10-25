@@ -8,6 +8,8 @@ import {
   truncateToWidth,
   type EditorTheme,
   type TUI,
+  type TuiMouseEvent,
+  type TuiMouseEventResult,
 } from "@earendil-works/pi-tui";
 import type { Config } from "../config/definition";
 import { getConfig } from "../config/store";
@@ -24,6 +26,8 @@ import type { SessionUsage } from "./usage";
 export class EnhancedEditor extends CustomEditor {
   private nativeStatusIndicator?: EditorStatusIndicator;
   private renderedBorder?: string;
+  private compactBottomBorder = "";
+  private compactAutocompleteStart?: number;
 
   constructor(
     tui: TUI,
@@ -120,13 +124,27 @@ export class EnhancedEditor extends CustomEditor {
     if (this.style !== "compact")
       return super.renderBottomBorder(width, hiddenLineCount);
     const config = getConfig();
-    return buildCompactBottomLine(
+    this.compactBottomBorder = buildCompactBottomLine(
       width,
       this.buildFrameData(config),
       this.ctx.ui.theme,
       this.borderColor,
       hiddenLineCount,
     );
+    return this.compactBottomBorder;
+  }
+
+  override handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
+    if (
+      this.style === "compact" &&
+      this.isShowingAutocomplete() &&
+      this.compactAutocompleteStart !== undefined &&
+      event.y >= this.compactAutocompleteStart
+    ) {
+      // Pi's mouse coordinates include the bottom rule before the list.
+      return super.handleMouse({ ...event, y: event.y + 1 });
+    }
+    return super.handleMouse(event);
   }
 
   override render(width: number): string[] {
@@ -140,9 +158,16 @@ export class EnhancedEditor extends CustomEditor {
     this.renderedBorder = renderedBorder;
     if (borderChanged) this.nativeStatusIndicator?.invalidate();
     if (this.style === "compact") {
-      return super
-        .render(Math.max(1, width))
-        .map((line) => truncateToWidth(line, Math.max(0, width), ""));
+      const lines = super.render(Math.max(1, width));
+      this.compactAutocompleteStart = undefined;
+      if (this.isShowingAutocomplete()) {
+        const bottom = lines.lastIndexOf(this.compactBottomBorder);
+        if (bottom > 0 && bottom < lines.length - 1) {
+          this.compactAutocompleteStart = bottom;
+          lines.push(...lines.splice(bottom, 1));
+        }
+      }
+      return lines.map((line) => truncateToWidth(line, Math.max(0, width), ""));
     }
     const lines = super.render(Math.max(1, width - 2));
     if (lines.length < 2) return lines;
