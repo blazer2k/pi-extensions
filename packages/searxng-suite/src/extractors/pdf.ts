@@ -1,5 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
-import { readResponseBody } from "../helpers/request";
+import { readResponseBody, type ResponseBody } from "../helpers/request";
 import {
   MAX_PDF_BYTES,
   MAX_MARKDOWN_CHARS,
@@ -10,7 +10,7 @@ import {
 export async function extractPdf(
   sourceUrl: string,
   contentType: string,
-  res: Response,
+  res: ResponseBody,
   signal?: AbortSignal,
 ): Promise<ExtractResponse> {
   const buffer = await readResponseBody(res, MAX_PDF_BYTES, signal);

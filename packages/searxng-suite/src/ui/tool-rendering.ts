@@ -3,13 +3,13 @@ import type {
   ToolRenderResultOptions,
   Theme,
 } from "@earendil-works/pi-coding-agent";
-import { keyHint } from "@earendil-works/pi-coding-agent";
+import { formatSize, keyHint } from "@earendil-works/pi-coding-agent";
 import type {
   ToolStatus,
   SearchToolDetails,
   ExtractToolDetails,
 } from "../tools/types";
-import { getExtractTextLength, formatBytes } from "../extractors/shared";
+import { getExtractTextLength } from "../extractors/shared";
 
 interface ToolStatusDetails {
   status: ToolStatus;
@@ -118,7 +118,7 @@ export function buildExtractContentSummary(
     const sizeText =
       result.details.byteLength === undefined
         ? ""
-        : `: ${formatBytes(result.details.byteLength)}`;
+        : `: ${formatSize(result.details.byteLength)}`;
 
     return theme.fg("dim", `Image attached (.${format})${sizeText}`);
   }

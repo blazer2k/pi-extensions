@@ -1,5 +1,6 @@
-import { readResponseBody } from "../helpers/request";
-import { MAX_IMAGE_BYTES, type ExtractResponse, formatBytes } from "./shared";
+import { formatSize } from "@earendil-works/pi-coding-agent";
+import { readResponseBody, type ResponseBody } from "../helpers/request";
+import { MAX_IMAGE_BYTES, type ExtractResponse } from "./shared";
 
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -11,7 +12,7 @@ const SUPPORTED_IMAGE_TYPES = new Set([
 export async function extractImage(
   sourceUrl: string,
   contentType: string,
-  res: Response,
+  res: ResponseBody,
   signal?: AbortSignal,
 ): Promise<ExtractResponse> {
   if (!SUPPORTED_IMAGE_TYPES.has(contentType)) {
@@ -31,7 +32,7 @@ export async function extractImage(
         text: [
           `Image extracted from ${sourceUrl}`,
           `Content-Type: ${contentType}`,
-          `Size: ${formatBytes(buffer.byteLength, 2)}`,
+          `Size: ${formatSize(buffer.byteLength)}`,
         ].join("\n"),
       },
       {

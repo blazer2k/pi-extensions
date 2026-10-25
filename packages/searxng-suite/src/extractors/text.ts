@@ -1,4 +1,4 @@
-import { readResponseBody } from "../helpers/request";
+import { readResponseBody, type ResponseBody } from "../helpers/request";
 import {
   type ExtractResponse,
   MAX_TEXT_BYTES,
@@ -10,7 +10,7 @@ import {
 export async function extractPlainText(
   sourceUrl: string,
   contentType: string,
-  res: Response,
+  res: ResponseBody,
   signal?: AbortSignal,
 ): Promise<ExtractResponse> {
   const raw = new TextDecoder().decode(

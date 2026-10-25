@@ -1,6 +1,6 @@
 import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
-import { readResponseBody } from "../helpers/request";
+import { readResponseBody, type ResponseBody } from "../helpers/request";
 import {
   type ExtractResponse,
   MAX_HTML_BYTES,
@@ -51,8 +51,9 @@ function getMarkdownFromHTML(html: Element["innerHTML"]): string {
 export async function extractHtml(
   sourceUrl: string,
   contentType: string,
-  res: Response,
+  res: ResponseBody,
   signal?: AbortSignal,
+  baseUrl = sourceUrl,
 ): Promise<ExtractResponse> {
   const raw = new TextDecoder().decode(
     await readResponseBody(res, MAX_HTML_BYTES, signal),
@@ -69,7 +70,7 @@ export async function extractHtml(
 
   if (!body) throw new Error("Fetch returned empty body");
 
-  const html = extractContent(document, sourceUrl);
+  const html = extractContent(document, baseUrl);
   const metaString = buildMetaString(document);
   const markdown = getMarkdownFromHTML(html);
 

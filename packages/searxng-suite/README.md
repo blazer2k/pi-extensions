@@ -22,7 +22,7 @@ This extension provides two LLM-callable tools:
 
 ## Requirements
 
-- **Node.js 20+** (extensions run via jiti)
+- **Node.js 22.19.0+** (extensions run via jiti)
 - A running [SearxNG](https://searxng.org) instance (local or remote)
 
 ## Installation
@@ -90,9 +90,15 @@ The LLM receives the category list in the tool description and picks the best ma
 
 ## Security
 
-- Private IP ranges (localhost, 10.x, 127.x, 192.168.x, 172.16–31.x) are blocked by default for `web_extract`.
+`web_extract` sends requests from the machine running Pi. An untrusted website could redirect a request to a local service, or try to trick the agent into reading private data and sending it elsewhere. The default block limits that access. It does not sandbox Pi's other tools.
+
+- `web_extract` blocks local/private IPv4 and IPv6 destinations by default, including hostname lookups and redirects. Non-public, reserved, and IPv4 translation/tunnel ranges are also blocked conservatively.
+- Every redirect is checked, with at most 20 redirects. The checked DNS addresses are passed directly to the connection; HTML links use the final page URL.
+- `allowPrivateUrls: true` permits local/private destinations for `web_extract`. Local SearxNG instances remain supported independently of this setting.
 - Content size limits prevent oversized downloads (2 MB HTML, 1 MB text, 50 MB PDF/images).
 - All search and extract results are flagged as untrusted content in the LLM context.
+
+Sizes follow Pi's 1024-based convention: 1 KB = 1024 bytes and 1 MB = 1,048,576 bytes. Displays use Pi's `KB`/`MB` labels and formatter.
 
 ## License
 

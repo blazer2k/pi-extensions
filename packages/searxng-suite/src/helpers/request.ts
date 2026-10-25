@@ -1,4 +1,14 @@
-import { formatBytes } from "../extractors/shared";
+import { formatSize } from "@earendil-works/pi-coding-agent";
+
+export interface ResponseBody {
+  headers: Pick<Headers, "get">;
+  body: {
+    getReader(): Pick<
+      ReadableStreamDefaultReader<Uint8Array>,
+      "read" | "cancel" | "releaseLock"
+    >;
+  } | null;
+}
 
 export function createTimeoutSignal(
   timeoutMs: number,
@@ -28,7 +38,7 @@ export function createTimeoutSignal(
 }
 
 export async function readResponseBody(
-  res: Response,
+  res: ResponseBody,
   maxBytes: number,
   signal?: AbortSignal,
 ): Promise<Buffer> {
@@ -41,7 +51,7 @@ export async function readResponseBody(
 
   try {
     signal?.throwIfAborted();
-    const limitMessage = `Content too large: limit is ${formatBytes(maxBytes)}`;
+    const limitMessage = `Content too large: limit is ${formatSize(maxBytes)}`;
     if (Number(res.headers.get("content-length")) > maxBytes) {
       throw new Error(limitMessage);
     }
@@ -65,7 +75,7 @@ export async function readResponseBody(
   }
 }
 
-export function getContentType(res: Response): string {
+export function getContentType(res: Pick<ResponseBody, "headers">): string {
   const header = res.headers.get("content-type") ?? "";
   return header.split(";")[0]?.trim().toLowerCase() ?? "";
 }

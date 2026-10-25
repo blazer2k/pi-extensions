@@ -9,6 +9,7 @@ export interface SearchToolDetails {
 
 export interface ExtractToolDetails {
   url: string;
+  finalUrl?: string;
   status: ToolStatus;
   contentType?: string;
   byteLength?: number;

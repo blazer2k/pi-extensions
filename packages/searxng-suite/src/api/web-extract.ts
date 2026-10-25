@@ -1,5 +1,6 @@
+import { Agent, fetch } from "undici";
 import { createTimeoutSignal, getContentType } from "../helpers/request";
-import { getValidUrl } from "../helpers/url";
+import { getValidUrl, lookupPublic } from "../helpers/url";
 import { type ExtractResponse, getExtractKind } from "../extractors/shared";
 import { extractHtml } from "../extractors/html";
 import { extractPlainText } from "../extractors/text";
@@ -47,12 +48,42 @@ export async function webExtract(
     throw new Error(`Invalid URL: ${url}`);
   }
 
-  const fetchUrl = adaptRedditUrl(validatedUrl);
-
+  const dispatcher = new Agent({
+    connect: { lookup: options.allowPrivateUrls ? undefined : lookupPublic },
+  });
   const timeout = createTimeoutSignal(options.timeoutMs, options.signal);
+  const request = (target: string) =>
+    fetch(target, {
+      signal: timeout.signal,
+      headers,
+      dispatcher,
+      redirect: "manual",
+    });
 
   try {
-    const res = await fetch(fetchUrl, { signal: timeout.signal, headers });
+    let finalUrl = getValidUrl(
+      adaptRedditUrl(validatedUrl),
+      options.allowPrivateUrls,
+    );
+    if (!finalUrl) throw new Error("Invalid extraction destination");
+    let res = await request(finalUrl);
+    for (
+      let redirects = 0;
+      [301, 302, 303, 307, 308].includes(res.status) &&
+      res.headers.has("location");
+      redirects++
+    ) {
+      void res.body?.cancel().catch(() => {});
+      if (redirects >= 20) throw new Error("Too many redirects (limit: 20)");
+      const next = getValidUrl(
+        new URL(res.headers.get("location")!, finalUrl).href,
+        options.allowPrivateUrls,
+      );
+      if (!next)
+        throw new Error("Redirect to an invalid or private URL is not allowed");
+      finalUrl = next;
+      res = await request(finalUrl);
+    }
 
     if (!res.ok) {
       throw new Error(`Fetch returned ${res.status} ${res.statusText}`);
@@ -61,43 +92,68 @@ export async function webExtract(
     const contentType = getContentType(res);
     const kind = getExtractKind(contentType);
 
+    let result: ExtractResponse;
     switch (kind) {
       case "html":
-        return await extractHtml(
+        result = await extractHtml(
           validatedUrl,
           contentType,
           res,
           timeout.signal,
+          finalUrl,
         );
+        break;
 
       case "text":
-        return await extractPlainText(
+        result = await extractPlainText(
           validatedUrl,
           contentType,
           res,
           timeout.signal,
         );
+        break;
 
       case "pdf":
-        return await extractPdf(validatedUrl, contentType, res, timeout.signal);
-
-      case "image":
-        return await extractImage(
+        result = await extractPdf(
           validatedUrl,
           contentType,
           res,
           timeout.signal,
         );
+        break;
+
+      case "image":
+        result = await extractImage(
+          validatedUrl,
+          contentType,
+          res,
+          timeout.signal,
+        );
+        break;
 
       default:
         throw new Error(
           `Unsupported content type: ${contentType || "unknown"}`,
         );
     }
+    if (finalUrl !== validatedUrl) {
+      result.finalUrl = finalUrl;
+      const text = result.content.find((item) => item.type === "text");
+      if (text) text.text = `Final URL: ${finalUrl}\n${text.text}`;
+    }
+    return result;
   } catch (err) {
     timeout.signal.throwIfAborted();
+    if (
+      err instanceof TypeError &&
+      err.cause instanceof Error &&
+      err.cause.message
+    ) {
+      throw new Error(`Fetch failed: ${err.cause.message}`, { cause: err });
+    }
     throw err;
   } finally {
     timeout.cleanup();
+    void dispatcher.destroy().catch(() => {});
   }
 }

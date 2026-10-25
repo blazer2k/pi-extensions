@@ -56,6 +56,7 @@ export function registerExtractTool(pi: ExtensionAPI) {
           content: result.content,
           details: {
             url: result.sourceUrl,
+            finalUrl: result.finalUrl,
             status: "success",
             contentType: result.contentType,
             byteLength: result.byteLength,
