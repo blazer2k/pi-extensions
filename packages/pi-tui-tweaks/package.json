@@ -28,7 +28,8 @@
     "!src/testing/**",
     "!src/tools/test-fixtures/**",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

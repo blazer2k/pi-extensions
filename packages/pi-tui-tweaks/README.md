@@ -1,3 +1,5 @@
+# Pi TUI Tweaks
+
 Compact tool output and configurable styling for [Pi's interactive TUI](https://pi.dev).
 
 ## Overview
