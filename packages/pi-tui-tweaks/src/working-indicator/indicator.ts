@@ -268,22 +268,20 @@ export function registerWorkingIndicator(
     if (!animTimer) animTimer = setInterval(renderFrame, ANIM_INTERVAL_MS);
   }
 
-  let compactionPending = false;
+  let newTaskPending = false;
   let lastStopReason: string | undefined;
 
   const session: WorkingIndicatorSession = {
     start() {
-      // A compaction split continues the same task, so keep the original
-      // start time and let the compaction gap count toward the total.
-      if (!compactionPending || runStartTime === 0) runStartTime = Date.now();
-      compactionPending = false;
+      // Automatic continuations share the task clock until settlement or new input.
+      if (newTaskPending || runStartTime === 0) runStartTime = Date.now();
+      newTaskPending = false;
       startAnimation();
     },
     noteMessageEnd(message) {
       if (message?.role === "assistant") lastStopReason = message.stopReason;
     },
     noteCompaction(reason) {
-      compactionPending = true;
       compactionReason = reason;
       startAnimation();
     },
@@ -302,7 +300,7 @@ export function registerWorkingIndicator(
     },
     noteInput() {
       // New user input starts a new task: drop task-bound state.
-      compactionPending = false;
+      newTaskPending = true;
       promptStartedAt = 0;
       lastStopReason = undefined;
     },
@@ -343,7 +341,7 @@ export function registerWorkingIndicator(
         ctx.ui.notify(`Worked for ${assembleRunDuration(startedAt)}`);
       }
       lastStopReason = undefined;
-      compactionPending = false;
+      newTaskPending = false;
       promptStartedAt = 0;
     },
     dispose() {

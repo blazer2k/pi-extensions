@@ -285,7 +285,7 @@ describe("working indicator rendering", () => {
       );
       clock.advance(1_000);
       handlers.agent_start![0]!();
-      expect(getLastFrames()![0]).toBe(first);
+      expect(getLastFrames()![0]).toStartWith(base);
     } finally {
       handle.dispose();
       clock.restore();
@@ -327,6 +327,92 @@ function emitAssistantMessageEnd(
 }
 
 describe("registerWorkingIndicator", () => {
+  it("keeps elapsed time through repeated stream retries and notifies once at settlement", () => {
+    const previous = getConfig();
+    setTestConfig({ workingIndicator: { showDuration: true } });
+    const harness = mkIndicatorHarness();
+    const notifications: string[] = [];
+    harness.ctx.ui.notify = (message) => {
+      notifications.push(message);
+    };
+    const clock = installFakeClock();
+    const handle = registerWorkingIndicator(harness.pi, harness.ctx);
+    try {
+      harness.handlers.agent_start![0]!();
+      handle.setStatusIndicator(suppliedStatus("working"));
+      for (const attempt of [1, 2]) {
+        clock.advance(5_000);
+        harness.handlers.message_end![0]!({
+          type: "message_end",
+          message: {
+            role: "assistant",
+            stopReason: "error",
+            errorMessage: "Error: WebSocket closed 1012",
+          },
+        });
+        handle.setStatusIndicator(undefined);
+        const retry = suppliedStatus("retry");
+        handle.setStatusIndicator(retry);
+        expect(harness.renderStatus().join("\n")).toContain("Native retry");
+        clock.advance(2_000);
+        harness.handlers.agent_start![0]!();
+        handle.setStatusIndicator(suppliedStatus("working"));
+        expect(harness.getLastFrames()![0]).toContain(
+          `Working (${attempt * 7}s`,
+        );
+        expect(notifications).toEqual([]);
+        expect(retry.setMessage).not.toHaveBeenCalled();
+        expect(retry.setIndicator).not.toHaveBeenCalled();
+        expect(retry.dispose).not.toHaveBeenCalled();
+      }
+      clock.advance(3_000);
+      emitAssistantMessageEnd(harness.handlers, "stop");
+      harness.handlers.agent_settled![0]!({
+        type: "agent_settled",
+        aborted: false,
+      });
+      expect(notifications).toEqual(["Worked for 17s"]);
+      clock.advance(5_000);
+      harness.handlers.agent_start![0]!();
+      expect(harness.getLastFrames()![0]).toContain("Working (0s");
+    } finally {
+      handle.dispose();
+      clock.restore();
+      setTestConfig(previous);
+    }
+  });
+
+  for (const stopReason of ["error", "aborted"] as const) {
+    it(`clears retry timing after an ${stopReason} settlement`, () => {
+      const previous = getConfig();
+      setTestConfig({ workingIndicator: { showDuration: true } });
+      const clock = installFakeClock();
+      const { pi, ctx, handlers, getNotifyCount, getLastFrames } =
+        mkIndicatorHarness();
+      const handle = registerWorkingIndicator(pi, ctx);
+      try {
+        handlers.agent_start![0]!();
+        clock.advance(5_000);
+        emitAssistantMessageEnd(handlers, "error");
+        handlers.agent_start![0]!();
+        emitAssistantMessageEnd(handlers, stopReason);
+        handlers.agent_settled![0]!({
+          type: "agent_settled",
+          aborted: stopReason === "aborted",
+        });
+        expect(getNotifyCount()).toBe(0);
+        expect(getLastFrames()).toEqual([]);
+        clock.advance(5_000);
+        handlers.agent_start![0]!();
+        expect(getLastFrames()![0]).toContain("Working (0s");
+      } finally {
+        handle.dispose();
+        clock.restore();
+        setTestConfig(previous);
+      }
+    });
+  }
+
   it("notifies on agent_settled after a clean run", () => {
     const { pi, ctx, handlers, getNotifyCount } = mkIndicatorHarness();
     const handle = registerWorkingIndicator(pi, ctx);
