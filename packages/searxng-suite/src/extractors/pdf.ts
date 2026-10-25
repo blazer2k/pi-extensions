@@ -1,9 +1,9 @@
 import { extractText, getDocumentProxy } from "unpdf";
+import { readResponseBody } from "../helpers/request";
 import {
   MAX_PDF_BYTES,
   MAX_MARKDOWN_CHARS,
   type ExtractResponse,
-  formatBytes,
   truncateContent,
 } from "./shared";
 
@@ -11,20 +11,9 @@ export async function extractPdf(
   sourceUrl: string,
   contentType: string,
   res: Response,
+  signal?: AbortSignal,
 ): Promise<ExtractResponse> {
-  const contentLength = Number(res.headers.get("content-length") ?? "0");
-
-  if (contentLength > MAX_PDF_BYTES) {
-    throw new Error(`PDF too large: ${formatBytes(contentLength)}`);
-  }
-
-  const buffer = await res.arrayBuffer();
-
-  if (buffer.byteLength > MAX_PDF_BYTES) {
-    throw new Error(
-      `PDF too large after download: ${formatBytes(buffer.byteLength)}`,
-    );
-  }
+  const buffer = await readResponseBody(res, MAX_PDF_BYTES, signal);
 
   const pdf = await getDocumentProxy(new Uint8Array(buffer));
   const { totalPages, text } = await extractText(pdf, { mergePages: false });

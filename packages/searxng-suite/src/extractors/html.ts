@@ -1,11 +1,11 @@
 import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
+import { readResponseBody } from "../helpers/request";
 import {
   type ExtractResponse,
   MAX_HTML_BYTES,
   MAX_HTML_CHARS,
   MAX_MARKDOWN_CHARS,
-  formatBytes,
   truncateContent,
 } from "./shared";
 import { extractContent } from "./content-extractor";
@@ -52,13 +52,11 @@ export async function extractHtml(
   sourceUrl: string,
   contentType: string,
   res: Response,
+  signal?: AbortSignal,
 ): Promise<ExtractResponse> {
-  const contentLength = Number(res.headers.get("content-length") ?? "0");
-  if (contentLength > MAX_HTML_BYTES) {
-    throw new Error(`Content too large: ${formatBytes(contentLength)}`);
-  }
-
-  const raw = await res.text();
+  const raw = new TextDecoder().decode(
+    await readResponseBody(res, MAX_HTML_BYTES, signal),
+  );
 
   if (raw.length > MAX_HTML_CHARS) {
     throw new Error(

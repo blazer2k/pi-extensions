@@ -111,6 +111,9 @@ export async function webSearch(
     const results = response.results.slice(0, options.limit);
 
     return { results };
+  } catch (err) {
+    timeout.signal.throwIfAborted();
+    throw err;
   } finally {
     timeout.cleanup();
   }

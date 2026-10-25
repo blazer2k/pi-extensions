@@ -63,22 +63,40 @@ export async function webExtract(
 
     switch (kind) {
       case "html":
-        return extractHtml(validatedUrl, contentType, res);
+        return await extractHtml(
+          validatedUrl,
+          contentType,
+          res,
+          timeout.signal,
+        );
 
       case "text":
-        return extractPlainText(validatedUrl, contentType, res);
+        return await extractPlainText(
+          validatedUrl,
+          contentType,
+          res,
+          timeout.signal,
+        );
 
       case "pdf":
-        return extractPdf(validatedUrl, contentType, res);
+        return await extractPdf(validatedUrl, contentType, res, timeout.signal);
 
       case "image":
-        return extractImage(validatedUrl, contentType, res);
+        return await extractImage(
+          validatedUrl,
+          contentType,
+          res,
+          timeout.signal,
+        );
 
       default:
         throw new Error(
           `Unsupported content type: ${contentType || "unknown"}`,
         );
     }
+  } catch (err) {
+    timeout.signal.throwIfAborted();
+    throw err;
   } finally {
     timeout.cleanup();
   }

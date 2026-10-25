@@ -1,9 +1,9 @@
+import { readResponseBody } from "../helpers/request";
 import {
   type ExtractResponse,
   MAX_TEXT_BYTES,
   MAX_TEXT_CHARS,
   MAX_MARKDOWN_CHARS,
-  formatBytes,
   truncateContent,
 } from "./shared";
 
@@ -11,14 +11,11 @@ export async function extractPlainText(
   sourceUrl: string,
   contentType: string,
   res: Response,
+  signal?: AbortSignal,
 ): Promise<ExtractResponse> {
-  const contentLength = Number(res.headers.get("content-length") ?? "0");
-
-  if (contentLength > MAX_TEXT_BYTES) {
-    throw new Error(`Text content too large: ${formatBytes(contentLength)}`);
-  }
-
-  const raw = await res.text();
+  const raw = new TextDecoder().decode(
+    await readResponseBody(res, MAX_TEXT_BYTES, signal),
+  );
 
   if (raw.length > MAX_TEXT_CHARS) {
     throw new Error(
