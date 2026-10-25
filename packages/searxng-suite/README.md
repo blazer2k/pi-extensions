@@ -34,8 +34,8 @@ pi install npm:@blazer2k/searxng-suite
 Or install locally for development:
 
 ```bash
-git clone https://github.com/blazer2k/pi-blz.git
-cd pi-blz
+git clone https://github.com/blazer2k/pi-extensions.git
+cd pi-extensions
 npm install
 pi -e ./packages/searxng-suite/src/index.ts
 ```

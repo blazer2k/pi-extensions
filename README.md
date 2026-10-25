@@ -1,4 +1,4 @@
-# pi-blz
+# pi-extensions
 
 Monorepo for Pi CLI extensions.
 

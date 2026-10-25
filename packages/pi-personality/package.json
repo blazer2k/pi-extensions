@@ -13,13 +13,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/blazer2k/pi-blz.git",
+    "url": "git+https://github.com/blazer2k/pi-extensions.git",
     "directory": "packages/pi-personality"
   },
   "bugs": {
-    "url": "https://github.com/blazer2k/pi-blz/issues"
+    "url": "https://github.com/blazer2k/pi-extensions/issues"
   },
-  "homepage": "https://github.com/blazer2k/pi-blz/tree/main/packages/pi-personality#readme",
+  "homepage": "https://github.com/blazer2k/pi-extensions/tree/main/packages/pi-personality#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -39,6 +39,6 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/blazer2k/pi-blz/main/packages/pi-personality/images/bg.jpg"
+    "image": "https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/pi-personality/images/bg.jpg"
   }
 }

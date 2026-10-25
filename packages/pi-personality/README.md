@@ -48,8 +48,8 @@ pi install npm:@blazer2k/pi-personality
 Or install locally for development:
 
 ```bash
-git clone https://github.com/blazer2k/pi-blz.git
-cd pi-blz
+git clone https://github.com/blazer2k/pi-extensions.git
+cd pi-extensions
 npm install
 pi -e ./packages/pi-personality/src/index.ts
 ```

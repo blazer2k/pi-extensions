@@ -11,13 +11,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/blazer2k/pi-blz.git",
+    "url": "git+https://github.com/blazer2k/pi-extensions.git",
     "directory": "packages/pi-tui-tweaks"
   },
   "bugs": {
-    "url": "https://github.com/blazer2k/pi-blz/issues"
+    "url": "https://github.com/blazer2k/pi-extensions/issues"
   },
-  "homepage": "https://github.com/blazer2k/pi-blz/tree/main/packages/pi-tui-tweaks#readme",
+  "homepage": "https://github.com/blazer2k/pi-extensions/tree/main/packages/pi-tui-tweaks#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -27,7 +27,6 @@
     "!src/**/*.test.ts",
     "!src/testing/**",
     "!src/tools/test-fixtures/**",
-    "images",
     "README.md",
     "LICENSE"
   ],
@@ -41,6 +40,6 @@
     "extensions": [
       "./index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/blazer2k/pi-blz/main/packages/pi-tui-tweaks/images/example.webp"
+    "image": "https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/pi-tui-tweaks/media/rounded-editor.png"
   }
 }

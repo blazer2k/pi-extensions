@@ -14,13 +14,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/blazer2k/pi-blz.git",
+    "url": "git+https://github.com/blazer2k/pi-extensions.git",
     "directory": "packages/searxng-suite"
   },
   "bugs": {
-    "url": "https://github.com/blazer2k/pi-blz/issues"
+    "url": "https://github.com/blazer2k/pi-extensions/issues"
   },
-  "homepage": "https://github.com/blazer2k/pi-blz/tree/main/packages/searxng-suite#readme",
+  "homepage": "https://github.com/blazer2k/pi-extensions/tree/main/packages/searxng-suite#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -48,6 +48,6 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/blazer2k/pi-blz/main/packages/searxng-suite/images/bg.jpg"
+    "image": "https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/searxng-suite/images/bg.jpg"
   }
 }
