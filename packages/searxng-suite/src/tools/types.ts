@@ -4,6 +4,7 @@ export interface SearchToolDetails {
   query: string;
   status: ToolStatus;
   resultCount?: number;
+  warnings?: string[];
   error?: string;
 }
 

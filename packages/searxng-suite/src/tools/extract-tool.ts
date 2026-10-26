@@ -6,7 +6,7 @@ import { Type } from "typebox";
 import { getConfig } from "../helpers/config";
 import { webExtract } from "../api/web-extract";
 import { Text } from "@earendil-works/pi-tui";
-import { errorMessage, isAbortError, isTimeoutError } from "../helpers/error";
+import { buildToolFailure } from "../helpers/error";
 import type { ExtractToolDetails } from "./types";
 import {
   getToolFailureStatus,
@@ -36,13 +36,12 @@ export function registerExtractTool(pi: ExtensionAPI) {
       const config = getConfig();
 
       if (signal?.aborted) {
-        return {
-          content: [{ type: "text", text: "Extract aborted" }],
-          details: {
-            url: params.url,
-            status: "aborted",
-          },
-        };
+        return buildToolFailure(
+          "Extract",
+          { url: params.url },
+          signal.reason,
+          signal,
+        );
       }
 
       try {
@@ -63,42 +62,7 @@ export function registerExtractTool(pi: ExtensionAPI) {
           },
         };
       } catch (err) {
-        if (isAbortError(err)) {
-          return {
-            content: [{ type: "text", text: "Extract aborted" }],
-            details: {
-              url: params.url,
-              status: "aborted",
-            },
-          };
-        }
-
-        if (isTimeoutError(err)) {
-          return {
-            content: [{ type: "text", text: "Extract timed out" }],
-            details: {
-              url: params.url,
-              status: "error",
-              error: errorMessage(err),
-            },
-          };
-        }
-
-        const message = errorMessage(err);
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${message}`,
-            },
-          ],
-          details: {
-            url: params.url,
-            status: "error",
-            error: message,
-          },
-        };
+        return buildToolFailure("Extract", { url: params.url }, err, signal);
       }
     },
     renderCall(args, theme, context_) {

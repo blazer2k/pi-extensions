@@ -21,7 +21,7 @@ const defaultConfig: Config = {
   llmCanOverrideLimit: false,
   timeoutMs: 15000,
   safesearch: 0,
-  llmCanPickCategory: true,
+  llmCanPickCategory: false,
   allowPrivateUrls: false,
   verbose: false,
 };

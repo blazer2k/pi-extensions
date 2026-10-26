@@ -1,6 +1,9 @@
-import { Type, type Static } from "typebox";
+import { stripVTControlCharacters } from "node:util";
+import { parseHTML } from "linkedom";
+import { Type } from "typebox";
 import { Compile } from "typebox/compile";
 import { createTimeoutSignal } from "../helpers/request";
+import { getValidUrl } from "../helpers/url";
 import { truncateContent } from "../extractors/shared";
 
 export interface SearchOptions {
@@ -11,7 +14,12 @@ export interface SearchOptions {
   signal?: AbortSignal;
 }
 
-const VALID_CATEGORIES = new Set(["general", "news", "science", "videos"]);
+export const SEARCH_CATEGORIES = [
+  "general",
+  "news",
+  "science",
+  "videos",
+] as const;
 
 export interface SearchResult {
   title: string;
@@ -22,16 +30,12 @@ export interface SearchResult {
 
 export interface SearchResponse {
   results: SearchResult[];
+  warnings?: string[];
+  suggestions?: string[];
+  corrections?: string[];
 }
 
-// SearxNG returns null for fields like content, publishedDate, and
-// source in image search results.
-//
-// TypeBox's Optional(String) rejects null,
-// causing "Invalid SearxNG response shape" errors.
-//
-// Changed to Union([String, Null]) to match actual API behavior.
-//
+// SearxNG can return null for otherwise textual result fields.
 const SearchResultSchema = Type.Object({
   title: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   url: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -41,28 +45,100 @@ const SearchResultSchema = Type.Object({
 
 const SearchResponseSchema = Type.Object({
   results: Type.Array(SearchResultSchema),
+  unresponsive_engines: Type.Optional(Type.Unknown()),
+  suggestions: Type.Optional(Type.Unknown()),
+  corrections: Type.Optional(Type.Unknown()),
 });
 
-type RawSearchResponse = Static<typeof SearchResponseSchema>;
-
 const searchResponseValidator = Compile(SearchResponseSchema);
+
+function cleanSearchText(value: string, maxChars: number): string {
+  const { document } = parseHTML("<html><body></body></html>");
+  const element = document.createElement("div");
+  element.innerHTML = value;
+  element.querySelectorAll("script, style").forEach((node) => node.remove());
+  const text = stripVTControlCharacters(element.innerText)
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return truncateContent(text, maxChars);
+}
+
+function cleanSearchHints(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => cleanSearchText(item, 200))
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function engineWarnings(value: unknown): string[] {
+  if (value == null) return [];
+  if (!Array.isArray(value)) {
+    return ["SearxNG returned invalid engine diagnostics."];
+  }
+
+  const warnings: string[] = [];
+  let problemCount = 0;
+  let invalidCount = 0;
+  for (const entry of value) {
+    if (
+      !Array.isArray(entry) ||
+      entry.length !== 2 ||
+      typeof entry[0] !== "string" ||
+      typeof entry[1] !== "string"
+    ) {
+      invalidCount++;
+      continue;
+    }
+    const engine = cleanSearchText(entry[0], 50);
+    const reason = cleanSearchText(entry[1], 200);
+    if (!engine || !reason) {
+      invalidCount++;
+      continue;
+    }
+    problemCount++;
+    if (warnings.length < 10) warnings.push(`${engine}: ${reason}`);
+  }
+  if (problemCount > warnings.length) {
+    warnings.push(
+      `${problemCount - warnings.length} more reported engine problems omitted.`,
+    );
+  }
+  if (invalidCount) {
+    warnings.push(
+      `SearxNG returned ${invalidCount} invalid engine diagnostic entries.`,
+    );
+  }
+  return warnings;
+}
 
 function normalizeSearchResponse(raw: unknown): SearchResponse {
   if (!searchResponseValidator.Check(raw)) {
     throw new Error("Invalid SearxNG response shape");
   }
 
-  const response = raw as RawSearchResponse;
+  const warnings = engineWarnings(raw.unresponsive_engines);
+  const suggestions = cleanSearchHints(raw.suggestions);
+  const corrections = cleanSearchHints(raw.corrections);
 
   return {
-    results: response.results
-      .filter((result) => result.url)
-      .map((result) => ({
-        title: truncateContent(result.title ?? "Untitled", 200),
-        url: result.url!,
-        content: truncateContent(result.content ?? "", 1000),
-        engine: truncateContent(result.engine ?? "unknown", 50),
-      })),
+    ...(warnings.length && { warnings }),
+    ...(suggestions.length && { suggestions }),
+    ...(corrections.length && { corrections }),
+    results: raw.results.flatMap((result) => {
+      const url = getValidUrl(result.url ?? "", true);
+      if (!url) return [];
+      return [
+        {
+          title: cleanSearchText(result.title ?? "", 200) || "Untitled",
+          url,
+          content: cleanSearchText(result.content ?? "", 1000),
+          engine: cleanSearchText(result.engine ?? "", 50) || "unknown",
+        },
+      ];
+    }),
   };
 }
 
@@ -78,7 +154,7 @@ export async function webSearch(
   url.searchParams.set("safesearch", options.safesearch.toString());
 
   if (options.category) {
-    if (!VALID_CATEGORIES.has(options.category)) {
+    if (!SEARCH_CATEGORIES.some((category) => category === options.category)) {
       throw new Error(`Invalid search category: ${options.category}`);
     }
 
@@ -110,7 +186,7 @@ export async function webSearch(
     const response = normalizeSearchResponse(raw);
     const results = response.results.slice(0, options.limit);
 
-    return { results };
+    return { ...response, results };
   } catch (err) {
     timeout.signal.throwIfAborted();
     throw err;
@@ -124,13 +200,25 @@ export function formatSearchResults(response: SearchResponse): string {
 
   const resultsString =
     results.length === 0
-      ? "No results found. Try changing your query."
+      ? response.warnings?.length
+        ? "No results were returned."
+        : "No results were returned. Try changing your query."
       : results
-          .map(
-            (r, i) =>
-              `## **${i + 1}.** ${r.title}\n**URL:** ${r.url}\n${r.content}`,
-          )
-          .join("\n\n---\n\n");
+          .map((r, i) => `${i + 1}. ${r.title}\nURL: ${r.url}\n${r.content}`)
+          .join("\n\n");
 
-  return resultsString;
+  return [
+    ...(response.warnings?.length
+      ? [
+          `Search warnings:\n${response.warnings.map((warning) => `- ${warning}`).join("\n")}`,
+        ]
+      : []),
+    resultsString,
+    ...(response.corrections?.length
+      ? [`Corrections: ${response.corrections.join("; ")}`]
+      : []),
+    ...(response.suggestions?.length
+      ? [`Suggestions: ${response.suggestions.join("; ")}`]
+      : []),
+  ].join("\n\n");
 }

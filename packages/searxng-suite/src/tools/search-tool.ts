@@ -5,8 +5,12 @@ import type {
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { getConfig } from "../helpers/config";
-import { webSearch, formatSearchResults } from "../api/web-search";
-import { errorMessage, isAbortError, isTimeoutError } from "../helpers/error";
+import {
+  webSearch,
+  formatSearchResults,
+  SEARCH_CATEGORIES,
+} from "../api/web-search";
+import { buildToolFailure } from "../helpers/error";
 import type { SearchToolDetails } from "./types";
 import {
   getToolFailureStatus,
@@ -46,15 +50,9 @@ export function registerSearchTool(pi: ExtensionAPI) {
         ? {
             category: Type.Optional(
               Type.Union(
-                [
-                  Type.Literal("general"),
-                  Type.Literal("news"),
-                  Type.Literal("science"),
-                  Type.Literal("videos"),
-                ],
+                SEARCH_CATEGORIES.map((category) => Type.Literal(category)),
                 {
-                  description:
-                    "Search category (pick one): general, news, science, videos",
+                  description: `Search category (pick one): ${SEARCH_CATEGORIES.join(", ")}`,
                 },
               ),
             ),
@@ -70,10 +68,12 @@ export function registerSearchTool(pi: ExtensionAPI) {
       const config = getConfig();
 
       if (signal?.aborted) {
-        return {
-          content: [{ type: "text", text: "Search aborted" }],
-          details: { query: params.query, status: "aborted" },
-        };
+        return buildToolFailure(
+          "Search",
+          { query: params.query },
+          signal.reason,
+          signal,
+        );
       }
 
       try {
@@ -104,45 +104,13 @@ export function registerSearchTool(pi: ExtensionAPI) {
             query,
             status: "success",
             resultCount: searchResponse.results.length,
+            ...(searchResponse.warnings && {
+              warnings: searchResponse.warnings,
+            }),
           },
         };
       } catch (err) {
-        if (isAbortError(err)) {
-          return {
-            content: [{ type: "text", text: "Search aborted" }],
-            details: {
-              query: params.query,
-              status: "aborted",
-            },
-          };
-        }
-
-        if (isTimeoutError(err)) {
-          return {
-            content: [{ type: "text", text: "Search timed out" }],
-            details: {
-              query: params.query,
-              status: "error",
-              error: errorMessage(err),
-            },
-          };
-        }
-
-        const message = errorMessage(err);
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${message}`,
-            },
-          ],
-          details: {
-            query: params.query,
-            status: "error",
-            error: message,
-          },
-        };
+        return buildToolFailure("Search", { query: params.query }, err, signal);
       }
     },
     renderCall(args, theme, context_) {
