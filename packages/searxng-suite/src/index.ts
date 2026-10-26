@@ -1,21 +1,21 @@
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { loadConfig } from "./helpers/config";
+import { loadConfig } from "./config/store";
 import { registerSearchTool } from "./tools/search-tool";
 import { registerExtractTool } from "./tools/extract-tool";
-import { registerConfigCommand } from "./tools/config-command";
 import { errorMessage } from "./helpers/error";
 
 export default function (pi: ExtensionAPI) {
-  loadConfig();
+  const configErrors: unknown[] = [];
+  loadConfig((err) => configErrors.push(err));
 
   pi.on("session_start", (_event, ctx) => {
-    loadConfig((err) => {
-      ctx.ui.notify(`Config load failed: ${errorMessage(err)}`, "error");
-    });
+    for (const err of configErrors.splice(0)) {
+      const message = `SearXNG config error: ${errorMessage(err)}`;
+      if (ctx.hasUI) ctx.ui.notify(message, "error");
+      else console.error(message);
+    }
   });
 
   registerSearchTool(pi);
   registerExtractTool(pi);
-
-  registerConfigCommand(pi);
 }

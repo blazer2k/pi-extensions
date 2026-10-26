@@ -3,7 +3,7 @@ import type {
   AgentToolResult,
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { getConfig } from "../helpers/config";
+import { getConfig } from "../config/store";
 import { webExtract } from "../api/web-extract";
 import { Text } from "@earendil-works/pi-tui";
 import { buildToolFailure } from "../helpers/error";
@@ -16,6 +16,8 @@ import {
 } from "../ui/tool-rendering";
 
 export function registerExtractTool(pi: ExtensionAPI) {
+  const config = getConfig();
+
   pi.registerTool({
     name: "web_extract",
     label: "Extract",
@@ -33,8 +35,6 @@ export function registerExtractTool(pi: ExtensionAPI) {
       params,
       signal,
     ): Promise<AgentToolResult<ExtractToolDetails>> {
-      const config = getConfig();
-
       if (signal?.aborted) {
         return buildToolFailure(
           "Extract",
@@ -78,9 +78,7 @@ export function registerExtractTool(pi: ExtensionAPI) {
         return new Text(failureStatus, 0, 0);
       }
 
-      const verbose = getConfig().verbose;
-
-      if (!verbose) {
+      if (!config.verbose) {
         const text = buildExtractContentSummary(result, theme);
         return new Text(text, 0, 0);
       }

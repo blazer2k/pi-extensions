@@ -7,7 +7,7 @@ import { getValidUrl } from "../helpers/url";
 import { truncateContent } from "../extractors/shared";
 
 export interface SearchOptions {
-  limit: number;
+  maxResults: number;
   timeoutMs: number;
   safesearch: 0 | 1 | 2;
   category?: string;
@@ -35,7 +35,7 @@ export interface SearchResponse {
   corrections?: string[];
 }
 
-// SearxNG can return null for otherwise textual result fields.
+// SearXNG can return null for otherwise textual result fields.
 const SearchResultSchema = Type.Object({
   title: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   url: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -76,7 +76,7 @@ function cleanSearchHints(value: unknown): string[] {
 function engineWarnings(value: unknown): string[] {
   if (value == null) return [];
   if (!Array.isArray(value)) {
-    return ["SearxNG returned invalid engine diagnostics."];
+    return ["SearXNG returned invalid engine diagnostics."];
   }
 
   const warnings: string[] = [];
@@ -108,7 +108,7 @@ function engineWarnings(value: unknown): string[] {
   }
   if (invalidCount) {
     warnings.push(
-      `SearxNG returned ${invalidCount} invalid engine diagnostic entries.`,
+      `SearXNG returned ${invalidCount} invalid engine diagnostic entries.`,
     );
   }
   return warnings;
@@ -116,7 +116,7 @@ function engineWarnings(value: unknown): string[] {
 
 function normalizeSearchResponse(raw: unknown): SearchResponse {
   if (!searchResponseValidator.Check(raw)) {
-    throw new Error("Invalid SearxNG response shape");
+    throw new Error("Invalid SearXNG response shape");
   }
 
   const warnings = engineWarnings(raw.unresponsive_engines);
@@ -179,12 +179,12 @@ export async function webSearch(
     });
 
     if (!res.ok) {
-      throw new Error(`SearxNG returned ${res.status} ${res.statusText}`);
+      throw new Error(`SearXNG returned ${res.status} ${res.statusText}`);
     }
 
     const raw = await res.json();
     const response = normalizeSearchResponse(raw);
-    const results = response.results.slice(0, options.limit);
+    const results = response.results.slice(0, options.maxResults);
 
     return { ...response, results };
   } catch (err) {

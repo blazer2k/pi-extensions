@@ -1,7 +1,7 @@
 {
   "name": "@blazer2k/searxng-suite",
   "version": "0.2.3",
-  "description": "SearxNG-based web search with category filtering and multi-format URL extraction for pi.",
+  "description": "SearXNG-based web search with category filtering and multi-format URL extraction for pi.",
   "type": "module",
   "keywords": [
     "pi",

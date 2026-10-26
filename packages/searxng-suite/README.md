@@ -1,6 +1,6 @@
 # @blazer2k/searxng-suite
 
-SearxNG-based web search with category filtering and multi-format URL extraction for [pi](https://pi.dev).
+SearXNG-based web search with category filtering and multi-format URL extraction for [pi](https://pi.dev).
 
 **Current version:** 0.2.3 · [Changelog](CHANGELOG.md)
 
@@ -8,7 +8,7 @@ SearxNG-based web search with category filtering and multi-format URL extraction
 
 This extension provides two LLM-callable tools:
 
-- **`web_search`:** Search the web via your SearxNG instance with configurable result limits, timeouts, and SafeSearch.
+- **`web_search`:** Search the web via your SearXNG instance with configurable result limits, timeouts, and SafeSearch.
 - **`web_extract`:** Extract content from any URL, supporting multiple formats:
 
 | Format     | Output                                                                              |
@@ -23,7 +23,7 @@ This extension provides two LLM-callable tools:
 ## Requirements
 
 - **Node.js 22.19.0+** (extensions run via jiti)
-- A running [SearxNG](https://searxng.org) instance (local or remote)
+- A running [SearXNG](https://searxng.org) instance (local or remote)
 
 ## Installation
 
@@ -46,34 +46,46 @@ pi -e ./packages/searxng-suite/src/index.ts
 
 | Variable          | Default                 | Description                              |
 | ----------------- | ----------------------- | ---------------------------------------- |
-| `SEARXNG_URL`     | `http://localhost:8888` | Base URL of your SearxNG instance        |
+| `SEARXNG_URL`     | `http://localhost:8888` | Base URL of your SearXNG instance        |
 | `SEARXNG_API_KEY` | _(none)_                | Bearer token for authenticated instances |
 
 These must be available to the process running pi – set them in your shell profile, systemd service, or however you launch pi.
 
-### Runtime Settings
+## Settings
 
-Run `/search-config` in pi to adjust settings at runtime:
+Edit `pi-searxng.json` inside Pi's agent directory, usually `~/.pi/agent/pi-searxng.json`, then run `/reload`. The directory follows `PI_CODING_AGENT_DIR`; `PI_SEARXNG_CONFIG_PATH` selects a different settings file. The file and its parent directory are created if missing.
 
-| Setting                | Options                           | Description                                                            |
-| ---------------------- | --------------------------------- | ---------------------------------------------------------------------- |
-| Results limit          | 1, 5, 10, 15, 20                  | Maximum results per search                                             |
-| LLM can override limit | false, true                       | Allow the LLM to request fewer results per search                      |
-| Timeout                | 5s, 10s, 15s, 30s                 | Request timeout                                                        |
-| SafeSearch             | 0 (off), 1 (moderate), 2 (strict) | Filter explicit content                                                |
-| LLM can pick category  | false, true                       | Allow the LLM to choose a search category (default: false)             |
-| Allow private URLs     | false, true                       | Allow requests to localhost and private IP ranges (`web_extract` only) |
-| Verbose                | false, true                       | Show full results instead of compact summary                           |
+```json
+{
+  "maxResults": 10,
+  "agentCanLimitResults": false,
+  "timeoutMs": 15000,
+  "safesearch": 0,
+  "agentCanPickCategory": false,
+  "allowPrivateUrls": false,
+  "verbose": false
+}
+```
 
-Settings persist to `~/.pi/agent/pi-searxng-suite.json`.
+| Setting                | Default | Meaning                                                                                                                   |
+| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `maxResults`           | `10`    | Maximum results to return. Any integer >= 1, without a hard-coded upper bound.                                            |
+| `agentCanLimitResults` | `false` | Let the agent request fewer results through the optional `maxResults` tool argument, from 1 up to the configured maximum. |
+| `timeoutMs`            | `15000` | Request timeout in milliseconds, from 1000 to 120000.                                                                     |
+| `safesearch`           | `0`     | SafeSearch: 0 (off), 1 (moderate), or 2 (strict).                                                                         |
+| `agentCanPickCategory` | `false` | Let the agent choose one of the supported search categories.                                                              |
+| `allowPrivateUrls`     | `false` | Permit local/private destinations for `web_extract`.                                                                      |
+| `verbose`              | `false` | Show result text instead of the compact summary.                                                                          |
 
-> **Note:** Changes to **LLM can override limit** and **LLM can pick category** require `/reload` to take effect, as they alter the tool schema presented to the LLM. Other settings (limit, timeout, SafeSearch, etc.) apply immediately.
+All settings take effect at startup or `/reload`, including the tool schemas. Increasing `maxResults` only retains more results from one SearXNG response; it does not add pagination.
 
-![Example: configuring the extension via pi command](images/settings.webp)
+Missing or invalid settings get their defaults individually, valid values are preserved, and unknown keys are removed. Boolean and numeric values are not coerced from strings. Read, parse, and write errors are reported; a file that cannot be read or parsed is not overwritten, and a normalization write failure does not discard valid loaded settings.
+
+`/search-config` is no longer registered. The old `pi-searxng-suite.json` file is left untouched and is not read or migrated. Old setting names are not aliases for the new names.
 
 ## Search Categories
 
-Category picking is off by default (`llmCanPickCategory: false`), so searches omit the category parameter. Existing saved preferences are preserved. Enable it if you want specialized searches and your instance has working engines in these categories:
+Category picking is off by default (`agentCanPickCategory: false`), so searches omit the category parameter. Valid preferences in the selected settings file are preserved. Enable it if you want specialized searches and your instance has working engines in these categories:
 
 | Category  | Use case                       |
 | --------- | ------------------------------ |
@@ -82,7 +94,7 @@ Category picking is off by default (`llmCanPickCategory: false`), so searches om
 | `science` | Scientific papers and articles |
 | `videos`  | Video search                   |
 
-The LLM receives the category list in the tool description and picks the best match for each query.
+When enabled, the agent receives the category choices in the tool schema.
 
 ## Security
 
@@ -90,7 +102,7 @@ The LLM receives the category list in the tool description and picks the best ma
 
 - `web_extract` blocks local/private IPv4 and IPv6 destinations by default, including hostname lookups and redirects. Non-public, reserved, and IPv4 translation/tunnel ranges are also blocked conservatively.
 - Every redirect is checked, with at most 20 redirects. The checked DNS addresses are passed directly to the connection; HTML links use the final page URL.
-- `allowPrivateUrls: true` permits local/private destinations for `web_extract`. Local SearxNG instances remain supported independently of this setting.
+- `allowPrivateUrls: true` permits local/private destinations for `web_extract`. Local SearXNG instances remain supported independently of this setting.
 - Content size limits prevent oversized downloads (2 MB HTML, 1 MB text, 50 MB PDF/images).
 - All search and extract results are flagged as untrusted content in the LLM context.
 

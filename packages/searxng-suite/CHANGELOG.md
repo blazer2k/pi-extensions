@@ -16,13 +16,13 @@
 
 ### Fixed
 
-- Accept `null` values in SearxNG response fields (`content`, `title`, `url`, `engine`) — image search results with null fields no longer throw "Invalid SearxNG response shape"
+- Accept `null` values in SearXNG response fields (`content`, `title`, `url`, `engine`) — image search results with null fields no longer throw "Invalid SearXNG response shape"
 
 ## [0.2.0] – 2026-05-17
 
 ### Added
 
-- **Search categories** – LLM can target searches to specific SearxNG categories: `general`, `images`, `videos`, `news`, `it`, `science`, `files`, `social media`
+- **Search categories** – LLM can target searches to specific SearXNG categories: `general`, `images`, `videos`, `news`, `it`, `science`, `files`, `social media`
 - **LLM limit override** – When enabled, the LLM can request fewer results than the configured maximum per search
 - **`llmCanPickCategory` setting** – Toggle to allow/disallow LLM category selection (default: `true`)
 - **`llmCanOverrideLimit` setting** – Toggle to allow/disallow LLM limit override (default: `false`)
@@ -48,7 +48,7 @@
 
 ### Added
 
-- **`web_search` tool** – SearxNG-powered web search with configurable limits, timeouts, and SafeSearch
+- **`web_search` tool** – SearXNG-powered web search with configurable limits, timeouts, and SafeSearch
 - **`web_extract` tool** – URL content extraction supporting HTML, plain text, PDF, and images
 - **Config system** – JSON-based config with TypeBox validation, self-repair, and default values
 - **Runtime settings UI** – `/search-config` command to adjust settings without restarting
