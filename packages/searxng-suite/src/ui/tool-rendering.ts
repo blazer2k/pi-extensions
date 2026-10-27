@@ -4,6 +4,7 @@ import type {
   Theme,
 } from "@earendil-works/pi-coding-agent";
 import { formatSize, keyHint } from "@earendil-works/pi-coding-agent";
+import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import type {
   ToolStatus,
   SearchToolDetails,
@@ -72,30 +73,48 @@ export function buildToolTextOutput(
 
   if (!output) return "";
 
-  if (!options.expanded && output.length > maxCollapsedChars) {
-    const collapsed = output.slice(0, maxCollapsedChars);
-    const hiddenChars = output.length - maxCollapsedChars;
-
-    return (
-      `\n${collapsed
-        .split("\n")
-        .map((line) => theme.fg("toolOutput", line))
-        .join("\n")}` +
-      `${theme.fg("muted", `\n... (${hiddenChars} more chars,`)} ${keyHint("app.tools.expand", "to expand")})`
-    );
+  let preview = output;
+  if (!options.expanded) {
+    preview = output
+      .split("\n")
+      .slice(0, maxCollapsedLines)
+      .join("\n")
+      .slice(0, maxCollapsedChars);
+    if (preview.length < output.length) {
+      // Back up if the cutoff split a terminal escape sequence.
+      while (stripTerminalSequences(preview).includes("\x1b")) {
+        preview = preview.slice(0, preview.lastIndexOf("\x1b"));
+      }
+      // Do not leave half of a UTF-16 surrogate pair at the cutoff.
+      preview = preview.replace(/[\uD800-\uDBFF]$/, "");
+    }
   }
-  const lines = output.split("\n");
-  const maxLines = options.expanded ? lines.length : maxCollapsedLines;
-  const displayLines = lines.slice(0, maxLines);
-  const remainingLines = lines.length - maxLines;
-
-  let text = `\n${displayLines.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
-
-  if (remainingLines > 0) {
-    text += `${theme.fg("muted", `\n... (${remainingLines} more lines,`)} ${keyHint("app.tools.expand", "to expand")})`;
+  let text = `\n${preview
+    .split("\n")
+    .map((line) => theme.fg("toolOutput", line))
+    .join("\n")}`;
+  const hiddenChars = output.length - preview.length;
+  if (hiddenChars > 0) {
+    text += `${theme.fg("muted", `\n... (${hiddenChars} more chars,`)} ${keyHint("app.tools.expand", "to expand")})`;
   }
-
   return text;
+}
+
+export function buildToolResultText<
+  T extends SearchToolDetails | ExtractToolDetails,
+>(
+  result: AgentToolResult<T>,
+  options: ToolRenderResultOptions,
+  theme: Theme,
+  verbose: boolean,
+  summarize: (result: AgentToolResult<T>, theme: Theme) => string,
+): string {
+  return (
+    getToolFailureStatus(result.details, theme) ??
+    (verbose
+      ? buildToolTextOutput(result, options, theme)
+      : summarize(result, theme))
+  );
 }
 
 export function buildSearchResultsSummary(

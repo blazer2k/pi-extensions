@@ -9,9 +9,8 @@ import { Text } from "@earendil-works/pi-tui";
 import { buildToolFailure } from "../helpers/error";
 import type { ExtractToolDetails } from "./types";
 import {
-  getToolFailureStatus,
   buildToolCallText,
-  buildToolTextOutput,
+  buildToolResultText,
   buildExtractContentSummary,
 } from "../ui/tool-rendering";
 
@@ -70,20 +69,13 @@ export function registerExtractTool(pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
     renderResult(result, options, theme) {
-      const details = result.details as ExtractToolDetails;
-
-      const failureStatus = getToolFailureStatus(details, theme);
-
-      if (failureStatus) {
-        return new Text(failureStatus, 0, 0);
-      }
-
-      if (!config.verbose) {
-        const text = buildExtractContentSummary(result, theme);
-        return new Text(text, 0, 0);
-      }
-
-      const text = buildToolTextOutput(result, options, theme);
+      const text = buildToolResultText(
+        result,
+        options,
+        theme,
+        config.verbose,
+        buildExtractContentSummary,
+      );
       return new Text(text, 0, 0);
     },
   });

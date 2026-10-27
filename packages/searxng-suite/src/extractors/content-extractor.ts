@@ -74,7 +74,7 @@ function looksLikeNavigationBlock(el: Element): boolean {
   return (
     /^(nav|header|footer|aside)$/i.test(tag) ||
     /^(navigation|banner|contentinfo|complementary)$/i.test(role) ||
-    /\b(nav|menu|toc|table-of-contents|sidebar|aside|breadcrumb|footer|header|pagination|related|recommended|share|social|newsletter|subscribe)\b/i.test(
+    /\b(nav|menu|toc|table-of-contents|sidebar|aside|breadcrumb|footer|header|pagination|related-posts|related-articles|recommended-articles|share-buttons|social-share|newsletter|subscribe)\b/i.test(
       classId,
     )
   );
@@ -214,11 +214,15 @@ function looksLikeDiscussion(root: Element): boolean {
 }
 
 function getTailMarkerKind(el: Element): "strong" | "weak" | null {
-  const text = (el.textContent || "").replace(/\s+/g, " ").trim();
+  const heading = el.firstElementChild;
+  const markerText = heading?.matches("h2, h3, h4")
+    ? heading.textContent
+    : el.textContent;
+  const text = (markerText || "").replace(/\s+/g, " ").trim();
   if (!text) return null;
 
   if (
-    /^(found this article interesting\?|share\b|get the latest news|daily briefing newsletter|expert insights\b|popular stories|people on the move|webinar\b|virtual event\b)/i.test(
+    /^(found this article interesting\?|share this (article|post|story)\b|get the latest news\b|daily briefing newsletter\b)/i.test(
       text,
     )
   ) {
@@ -226,7 +230,7 @@ function getTailMarkerKind(el: Element): "strong" | "weak" | null {
   }
 
   if (
-    /^(trending\b|related\b|recommended articles\b|more from|more news|latest news)/i.test(
+    /^(trending\b|related (articles|posts|stories)\b|recommended articles\b|more from\b|more news\b|latest news\b|expert insights\b|popular stories\b|people on the move\b|webinar\b|virtual event\b)/i.test(
       text,
     )
   ) {
@@ -260,13 +264,13 @@ function isPrunableTailMarker(root: Element, el: Element): boolean {
   if (rootTextLen === 0) return false;
 
   const beforeRatio = getTextBeforeWithin(root, el) / rootTextLen;
-  if (beforeRatio >= 0.55) return true;
+  if (beforeRatio < 0.55) return false;
 
-  if (kind === "weak") return false;
-
-  const classId = getClassIdText(el);
-  return /\b(share|social|newsletter|subscribe|related|recommended|popular|latest|trending|footer|after-content|post-footer)\b/i.test(
-    classId,
+  // Weak headings need structural evidence, not just a position near the end.
+  return (
+    kind === "strong" ||
+    (looksLikeNavigationBlock(el) &&
+      getLinkTextLength(el) / getElementTextLength(el) >= 0.8)
   );
 }
 

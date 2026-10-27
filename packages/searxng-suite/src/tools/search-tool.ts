@@ -13,9 +13,8 @@ import {
 import { buildToolFailure } from "../helpers/error";
 import type { SearchToolDetails } from "./types";
 import {
-  getToolFailureStatus,
   buildToolCallText,
-  buildToolTextOutput,
+  buildToolResultText,
   buildSearchResultsSummary,
 } from "../ui/tool-rendering";
 
@@ -121,20 +120,13 @@ export function registerSearchTool(pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
     renderResult(result, options, theme) {
-      const details = result.details as SearchToolDetails;
-
-      const failureStatus = getToolFailureStatus(details, theme);
-
-      if (failureStatus) {
-        return new Text(failureStatus, 0, 0);
-      }
-
-      if (!config.verbose) {
-        const summary = buildSearchResultsSummary(result, theme);
-        return new Text(summary, 0, 0);
-      }
-
-      const text = buildToolTextOutput(result, options, theme);
+      const text = buildToolResultText(
+        result,
+        options,
+        theme,
+        config.verbose,
+        buildSearchResultsSummary,
+      );
       return new Text(text, 0, 0);
     },
   });
