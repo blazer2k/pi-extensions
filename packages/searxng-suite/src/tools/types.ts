@@ -17,6 +17,7 @@ export interface ExtractToolDetails {
   contentType?: string;
   byteLength?: number;
   fullOutputPath?: string;
+  originalPdfPath?: string;
   // Counts describe the complete tool text, including source metadata.
   truncation?: Pick<
     TruncationResult,

@@ -11,13 +11,13 @@ This extension provides two LLM-callable tools:
 - **`web_search`:** Search the web via your SearXNG instance with configurable result limits, timeouts, and SafeSearch.
 - **`web_extract`:** Extract content from any URL, supporting multiple formats:
 
-| Format     | Output                                                                              |
-| ---------- | ----------------------------------------------------------------------------------- |
-| HTML       | Denoised, converted to Markdown with metadata (title, author, date, description)    |
-| Plain text | Raw text with source info                                                           |
-| JSON       | Original JSON text with separate source info (`application/json`)                   |
-| PDF        | Text extracted per page with headers and separators (text-native PDFs only, no OCR) |
-| Images     | Attached with metadata (format, size)                                               |
+| Format     | Output                                                                           |
+| ---------- | -------------------------------------------------------------------------------- |
+| HTML       | Denoised, converted to Markdown with metadata (title, author, date, description) |
+| Plain text | Raw text with source info                                                        |
+| JSON       | Original JSON text with separate source info (`application/json`)                |
+| PDF        | Original PDF saved unchanged; text per page when available (no OCR)              |
+| Images     | Attached with metadata (format, size)                                            |
 
 JSON is validated as UTF-8 without re-serializing it. One leading UTF-8 BOM is removed; otherwise the original text, whitespace, escapes, keys, and number spellings are preserved. Source and final URLs are separate from the JSON payload.
 
@@ -27,13 +27,17 @@ JSON's download limit is 1 MB, including any BOM. Charset parameters are accepte
 
 ## Extracted output files
 
-Text fitting Pi's inline limits is returned in full: at most 2,000 lines and 50 KB (51,200 UTF-8 bytes), including source info. Small outputs do not create saved files. Images remain native attachments.
+Text fitting Pi's inline limits is returned in full: at most 2,000 lines and 50 KB (51,200 UTF-8 bytes), including source info. Small outputs do not create saved text files; PDFs always keep their original file. Images remain native attachments.
 
 Oversized text is saved completely before returning a limited preview and the actual absolute path. Files use private session folders in the operating system's temporary directory, with a unique directory per extraction: `content.md` for HTML-derived Markdown, `content.txt` for text/PDF text, and `content.json` for JSON. Saved JSON contains only the unchanged decoded payload, without source headers or notices. A single line too large for the preview may produce no text preview; the file still contains the complete output.
 
 Use available file tools to read or search these paths. Line-based reading cannot split a single huge JSON line. Completed files survive `/reload` while they exist, but OS temporary storage is not a permanent archive. There is no catalog, automatic refetch, or compaction recovery. If saving fails, the tool reports a native error and any available bounded preview, without claiming a saved file.
 
-Original PDF retention and larger configurable resource budgets are not implemented yet. Existing download and input-character limits still apply; saved text is the complete accepted extraction, not an unlimited download or an unchanged copy of HTML/PDF bytes.
+Every PDF that finishes downloading within the current 50-MB limit is saved unchanged as `original.pdf` before text conversion. Its absolute path is returned even when extracted text is short, empty, or conversion fails. Oversized text uses `content.txt` in the same directory; short text needs no separate text file. A required original-save failure is reported as an error and conversion does not start.
+
+No readable text does not prove that a PDF is empty or scanned. The retained original can be inspected using available PDF, OCR, or visual-processing tools/skills, but this extension does not run an OCR or vision pipeline.
+
+Larger configurable resource budgets are not implemented yet. Existing download and input-character limits still apply; saved text is the complete accepted extraction, not an unlimited download or an unchanged copy of HTML/PDF bytes. Only the separately saved original PDF is a byte-for-byte copy of its downloaded body.
 
 ## Requirements
 

@@ -1,20 +1,17 @@
-import { lstat, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   truncateHead,
-  withFileMutationQueue,
   type AgentToolResult,
 } from "@earendil-works/pi-coding-agent";
-import {
-  getExtractKind,
-  type ExtractKind,
-  type ExtractResponse,
-} from "../extractors/shared";
+import { getExtractKind, type ExtractResponse } from "../extractors/shared";
 import type { ExtractToolDetails } from "../tools/types";
 import { buildToolFailure, errorMessage } from "./error";
+import {
+  removeEmptyExtractionDirectory,
+  writeExtractionFile,
+} from "./extract-files";
 
 function getText(content: Array<{ type: string; text?: string }>): string {
   return content
@@ -23,36 +20,19 @@ function getText(content: Array<{ type: string; text?: string }>): string {
     .join("\n\n");
 }
 
-async function createDirectory(
-  sessionId: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  if (typeof sessionId !== "string" || !/^[a-zA-Z0-9_-]+$/.test(sessionId)) {
-    throw new Error("Invalid extraction session ID");
-  }
-  signal?.throwIfAborted();
-  const parent = resolve(tmpdir(), `pi-searxng-session-${sessionId}`);
-  try {
-    await mkdir(parent, { mode: 0o700 });
-  } catch (error) {
-    if (
-      !(error instanceof Error && "code" in error && error.code === "EEXIST")
-    ) {
-      throw error;
-    }
-  }
-  const stat = await lstat(parent);
-  const uid = process.getuid?.();
-  if (
-    !stat.isDirectory() ||
-    (uid !== undefined && (stat.uid !== uid || (stat.mode & 0o077) !== 0))
-  ) {
-    throw new Error(
-      "Extraction session directory is not a private owned directory",
-    );
-  }
-  signal?.throwIfAborted();
-  return mkdtemp(join(parent, "extract-"));
+function fileNotices(
+  details: Pick<ExtractToolDetails, "originalPdfPath" | "fullOutputPath">,
+): string {
+  return [
+    details.originalPdfPath
+      ? `Original PDF: ${JSON.stringify(details.originalPdfPath)}`
+      : "",
+    details.fullOutputPath
+      ? `Full output saved to: ${JSON.stringify(details.fullOutputPath)}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function previewText(text: string, notice: string, sourceInfo = ""): string {
@@ -87,14 +67,15 @@ function previewText(text: string, notice: string, sourceInfo = ""): string {
 
 async function saveOutput(
   body: string,
-  kind: ExtractKind | null,
-  getSessionId: () => string,
+  result: ExtractResponse,
+  getOutputDirectory: () => Promise<string>,
   sourceInfo: string,
   signal?: AbortSignal,
 ) {
   let directory: string | undefined;
   try {
-    directory = await createDirectory(getSessionId(), signal);
+    directory = await getOutputDirectory();
+    const kind = getExtractKind(result.contentType);
     const filename =
       kind === "html"
         ? "content.md"
@@ -104,23 +85,15 @@ async function saveOutput(
     const fullOutputPath = join(directory, filename);
     const output = previewText(
       body,
-      `Full output saved to: ${JSON.stringify(fullOutputPath)}\nRead or search the file with available tools.`,
+      `${fileNotices({ ...result, fullOutputPath })}\nRead or search the file with available tools.`,
       sourceInfo,
     );
-    await withFileMutationQueue(fullOutputPath, async () => {
-      signal?.throwIfAborted();
-      await writeFile(fullOutputPath, body, {
-        encoding: "utf8",
-        flag: "wx",
-        mode: 0o600,
-        signal,
-      });
-    });
+    await writeExtractionFile(fullOutputPath, body, signal);
     return { fullOutputPath, output };
   } catch (error) {
     if (directory) {
       try {
-        await rm(directory, { recursive: true, force: true });
+        await removeEmptyExtractionDirectory(directory);
       } catch (cleanupError) {
         if (!signal?.aborted) {
           throw new Error(
@@ -134,9 +107,46 @@ async function saveOutput(
   }
 }
 
+function outputFailure(
+  details: Omit<ExtractToolDetails, "status">,
+  cause: unknown,
+  signal?: AbortSignal,
+  content: ExtractResponse["content"] = [],
+  sourceInfo = "",
+): AgentToolResult<ExtractToolDetails> {
+  const failure = buildToolFailure("Extract", details, cause, signal);
+  const paths = fileNotices(details);
+  if (signal?.aborted && !paths) return failure;
+  const body = signal?.aborted ? "" : getText(content);
+  const notice = paths
+    ? `Extract incomplete\n${paths}`
+    : getText(failure.content);
+  const diagnostic = paths
+    ? [getText(failure.content), sourceInfo].filter(Boolean).join("\n")
+    : sourceInfo;
+  const previewNotice =
+    body && !details.fullOutputPath
+      ? details.originalPdfPath
+        ? "\nOnly the text preview is available; full text was not saved."
+        : "\nOnly the preview is available; the full output was not saved."
+      : details.originalPdfPath && !details.fullOutputPath
+        ? "\nNo extracted PDF text is available in this response."
+        : "";
+  return {
+    ...failure,
+    content: [
+      {
+        type: "text",
+        text: previewText(body, notice + previewNotice, diagnostic),
+      },
+      ...content.filter((item) => item.type === "image"),
+    ],
+  };
+}
+
 export async function buildExtractOutput(
   result: ExtractResponse,
-  getSessionId: () => string,
+  getOutputDirectory: () => Promise<string>,
   signal?: AbortSignal,
 ): Promise<AgentToolResult<ExtractToolDetails>> {
   const details = {
@@ -144,24 +154,31 @@ export async function buildExtractOutput(
     finalUrl: result.finalUrl,
     contentType: result.contentType,
     byteLength: result.byteLength,
+    ...(result.originalPdfPath && { originalPdfPath: result.originalPdfPath }),
   };
-  if (signal?.aborted) {
-    return buildToolFailure("Extract", details, signal.reason, signal);
-  }
   const kind = getExtractKind(result.contentType);
   const sourceInfo =
-    kind === "json"
+    kind === "json" || result.failure
       ? [
           `Source URL: ${result.sourceUrl}`,
           ...(result.finalUrl ? [`Final URL: ${result.finalUrl}`] : []),
           `Content-Type: ${result.contentType}`,
         ].join("\n")
       : "";
-  const content = sourceInfo
-    ? [{ type: "text" as const, text: sourceInfo }, ...result.content]
+  if (signal?.aborted || result.failure) {
+    return outputFailure(
+      details,
+      result.failure?.cause,
+      signal,
+      result.content,
+      sourceInfo,
+    );
+  }
+  const prefix = [fileNotices(details), sourceInfo].filter(Boolean).join("\n");
+  const content = prefix
+    ? [{ type: "text" as const, text: prefix }, ...result.content]
     : result.content;
-  const fullText = getText(content);
-  const full = truncateHead(fullText);
+  const full = truncateHead(getText(content));
   if (!full.truncated) {
     return { content, details: { ...details, status: "success" } };
   }
@@ -171,65 +188,43 @@ export async function buildExtractOutput(
     totalLines: full.totalLines,
     totalBytes: full.totalBytes,
   };
-  const body = kind === "json" ? getText(result.content) : fullText;
-  const images = result.content.filter((item) => item.type === "image");
+  const body = getText(result.content);
   let savedOutput: { fullOutputPath: string; output: string };
   try {
     savedOutput = await saveOutput(
       body,
-      kind,
-      getSessionId,
+      result,
+      getOutputDirectory,
       sourceInfo,
       signal,
     );
   } catch (error) {
-    const failure = buildToolFailure(
-      "Extract",
-      details,
+    return outputFailure(
+      { ...details, truncation },
       signal?.aborted
         ? error
         : new Error(`Could not save full output: ${errorMessage(error)}`, {
             cause: error,
           }),
       signal,
+      result.content,
+      sourceInfo,
     );
-    if (signal?.aborted) return failure;
-    return {
-      ...failure,
-      content: [
-        {
-          type: "text",
-          text: previewText(
-            body,
-            `${getText(failure.content)}\nOnly the preview is available; the full output was not saved.`,
-            sourceInfo,
-          ),
-        },
-        ...images,
-      ],
-      details: { ...failure.details, truncation },
-    };
   }
   const { fullOutputPath, output } = savedOutput;
   const completedDetails = { ...details, fullOutputPath, truncation };
-  const failure = signal?.aborted
-    ? buildToolFailure("Extract", completedDetails, signal.reason, signal)
-    : undefined;
+  const images = result.content.filter((item) => item.type === "image");
+  if (signal?.aborted) {
+    return outputFailure(
+      completedDetails,
+      signal.reason,
+      signal,
+      images,
+      sourceInfo,
+    );
+  }
   return {
-    ...failure,
-    content: [
-      {
-        type: "text",
-        text: failure
-          ? previewText(
-              "",
-              `${getText(failure.content)}\nFull output saved to: ${JSON.stringify(fullOutputPath)}`,
-              sourceInfo,
-            )
-          : output,
-      },
-      ...images,
-    ],
-    details: failure?.details ?? { ...completedDetails, status: "success" },
+    content: [{ type: "text", text: output }, ...images],
+    details: { ...completedDetails, status: "success" },
   };
 }

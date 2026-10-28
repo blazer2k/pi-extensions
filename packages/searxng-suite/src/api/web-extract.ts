@@ -12,6 +12,7 @@ export interface ExtractOptions {
   timeoutMs: number;
   signal?: AbortSignal;
   allowPrivateUrls: boolean;
+  getOutputDirectory?: () => Promise<string>;
 }
 
 const headers: Record<string, string> = {
@@ -124,10 +125,14 @@ export async function webExtract(
         break;
 
       case "pdf":
+        if (!options.getOutputDirectory) {
+          throw new Error("PDF extraction requires an output directory");
+        }
         result = await extractPdf(
           validatedUrl,
           contentType,
           res,
+          options.getOutputDirectory,
           timeout.signal,
         );
         break;

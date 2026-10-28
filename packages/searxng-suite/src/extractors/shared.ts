@@ -16,6 +16,8 @@ export interface ExtractResponse {
   finalUrl?: string;
   contentType: string;
   byteLength?: number;
+  originalPdfPath?: string;
+  failure?: { cause: unknown };
   content: ExtractContent[];
 }
 
