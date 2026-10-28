@@ -4,6 +4,7 @@ import { getValidUrl, lookupPublic } from "../helpers/url";
 import { type ExtractResponse, getExtractKind } from "../extractors/shared";
 import { extractHtml } from "../extractors/html";
 import { extractPlainText } from "../extractors/text";
+import { extractJson } from "../extractors/json";
 import { extractPdf } from "../extractors/pdf";
 import { extractImage } from "../extractors/image";
 
@@ -17,7 +18,7 @@ const headers: Record<string, string> = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   Accept:
-    "text/html,application/xhtml+xml,text/plain,application/pdf,image/png,image/jpeg,image/webp,image/gif,*/*;q=0.8",
+    "text/html,application/xhtml+xml,text/plain,application/json,application/pdf,image/png,image/jpeg,image/webp,image/gif,*/*;q=0.8",
   "Accept-Language": "en-US,en;q=0.9",
   "Cache-Control": "no-cache",
   "Sec-Fetch-Dest": "document",
@@ -113,6 +114,15 @@ export async function webExtract(
         );
         break;
 
+      case "json":
+        result = await extractJson(
+          validatedUrl,
+          contentType,
+          res,
+          timeout.signal,
+        );
+        break;
+
       case "pdf":
         result = await extractPdf(
           validatedUrl,
@@ -138,8 +148,10 @@ export async function webExtract(
     }
     if (finalUrl !== validatedUrl) {
       result.finalUrl = finalUrl;
-      const text = result.content.find((item) => item.type === "text");
-      if (text) text.text = `Final URL: ${finalUrl}\n${text.text}`;
+      if (kind !== "json") {
+        const text = result.content.find((item) => item.type === "text");
+        if (text) text.text = `Final URL: ${finalUrl}\n${text.text}`;
+      }
     }
     return result;
   } catch (err) {

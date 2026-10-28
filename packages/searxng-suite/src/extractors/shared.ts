@@ -6,7 +6,7 @@ export const MAX_MARKDOWN_CHARS = 100_000;
 export const MAX_PDF_BYTES = 50 * 1024 * 1024;
 export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 
-export type ExtractKind = "html" | "text" | "pdf" | "image";
+export type ExtractKind = "html" | "text" | "json" | "pdf" | "image";
 
 export type ExtractContent =
   | { type: "text"; text: string }
@@ -31,6 +31,10 @@ export function getExtractKind(contentType: string): ExtractKind | null {
 
   if (contentType.startsWith("image/")) {
     return "image";
+  }
+
+  if (contentType === "application/json") {
+    return "json";
   }
 
   if (contentType === "application/pdf") {
