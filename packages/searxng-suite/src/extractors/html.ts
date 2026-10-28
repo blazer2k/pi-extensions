@@ -1,13 +1,7 @@
 import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
 import { readResponseBody, type ResponseBody } from "../helpers/request";
-import {
-  type ExtractResponse,
-  MAX_HTML_BYTES,
-  MAX_HTML_CHARS,
-  MAX_MARKDOWN_CHARS,
-  truncateContent,
-} from "./shared";
+import { type ExtractResponse, MAX_HTML_BYTES, MAX_HTML_CHARS } from "./shared";
 import { extractContent } from "./content-extractor";
 
 const turndown = new TurndownService({
@@ -93,7 +87,7 @@ export async function extractHtml(
     content: [
       {
         type: "text" as const,
-        text: truncateContent(content, MAX_MARKDOWN_CHARS, "verbose"),
+        text: content,
       },
     ],
   };

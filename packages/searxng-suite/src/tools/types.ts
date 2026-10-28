@@ -1,3 +1,5 @@
+import type { TruncationResult } from "@earendil-works/pi-coding-agent";
+
 export type ToolStatus = "success" | "aborted" | "error";
 
 export interface SearchToolDetails {
@@ -14,5 +16,11 @@ export interface ExtractToolDetails {
   status: ToolStatus;
   contentType?: string;
   byteLength?: number;
+  fullOutputPath?: string;
+  // Counts describe the complete tool text, including source metadata.
+  truncation?: Pick<
+    TruncationResult,
+    "truncated" | "truncatedBy" | "totalLines" | "totalBytes"
+  >;
   error?: string;
 }

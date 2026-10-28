@@ -1,11 +1,5 @@
 import { readResponseBody, type ResponseBody } from "../helpers/request";
-import {
-  type ExtractResponse,
-  MAX_TEXT_BYTES,
-  MAX_TEXT_CHARS,
-  MAX_MARKDOWN_CHARS,
-  truncateContent,
-} from "./shared";
+import { type ExtractResponse, MAX_TEXT_BYTES, MAX_TEXT_CHARS } from "./shared";
 
 export async function extractPlainText(
   sourceUrl: string,
@@ -29,7 +23,7 @@ export async function extractPlainText(
     "",
     "---",
     "",
-    raw.trim(),
+    raw,
   ].join("\n");
 
   return {
@@ -38,7 +32,7 @@ export async function extractPlainText(
     content: [
       {
         type: "text" as const,
-        text: truncateContent(content, MAX_MARKDOWN_CHARS, "verbose"),
+        text: content,
       },
     ],
   };

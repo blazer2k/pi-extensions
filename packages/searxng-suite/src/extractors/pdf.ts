@@ -1,11 +1,6 @@
 import { extractText, getDocumentProxy } from "unpdf";
 import { readResponseBody, type ResponseBody } from "../helpers/request";
-import {
-  MAX_PDF_BYTES,
-  MAX_MARKDOWN_CHARS,
-  type ExtractResponse,
-  truncateContent,
-} from "./shared";
+import { MAX_PDF_BYTES, type ExtractResponse } from "./shared";
 
 export async function extractPdf(
   sourceUrl: string,
@@ -43,7 +38,7 @@ export async function extractPdf(
     content: [
       {
         type: "text",
-        text: truncateContent(content, MAX_MARKDOWN_CHARS, "verbose"),
+        text: content,
       },
     ],
   };
