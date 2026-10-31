@@ -21,14 +21,17 @@ function getText(content: Array<{ type: string; text?: string }>): string {
 }
 
 function fileNotices(
-  details: Pick<ExtractToolDetails, "originalPdfPath" | "fullOutputPath">,
+  details: Pick<
+    ExtractToolDetails,
+    "originalPdfPath" | "fullOutputPath" | "incomplete"
+  >,
 ): string {
   return [
     details.originalPdfPath
       ? `Original PDF: ${JSON.stringify(details.originalPdfPath)}`
       : "",
     details.fullOutputPath
-      ? `Full output saved to: ${JSON.stringify(details.fullOutputPath)}`
+      ? `${details.incomplete ? "Partial" : "Full"} output saved to: ${JSON.stringify(details.fullOutputPath)}`
       : "",
   ]
     .filter(Boolean)
@@ -70,7 +73,8 @@ async function saveOutput(
   result: ExtractResponse,
   getOutputDirectory: () => Promise<string>,
   sourceInfo: string,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  maxSessionStorageBytes: number,
 ) {
   let directory: string | undefined;
   try {
@@ -82,13 +86,23 @@ async function saveOutput(
         : kind === "json"
           ? "content.json"
           : "content.txt";
-    const fullOutputPath = join(directory, filename);
+    const fullOutputPath = join(
+      directory,
+      result.failure
+        ? filename.replace("content.", "content.partial.")
+        : filename,
+    );
     const output = previewText(
       body,
-      `${fileNotices({ ...result, fullOutputPath })}\nRead or search the file with available tools.`,
+      `${fileNotices({ ...result, fullOutputPath, incomplete: Boolean(result.failure) })}\nRead or search the file with available tools.`,
       sourceInfo,
     );
-    await writeExtractionFile(fullOutputPath, body, signal);
+    await writeExtractionFile(
+      fullOutputPath,
+      body,
+      maxSessionStorageBytes,
+      signal,
+    );
     return { fullOutputPath, output };
   } catch (error) {
     if (directory) {
@@ -144,9 +158,47 @@ function outputFailure(
   };
 }
 
+async function incompleteOutput(
+  result: ExtractResponse,
+  details: Omit<ExtractToolDetails, "status">,
+  getOutputDirectory: () => Promise<string>,
+  sourceInfo: string,
+  signal: AbortSignal | undefined,
+  maxSessionStorageBytes: number,
+): Promise<AgentToolResult<ExtractToolDetails>> {
+  const cause = result.failure?.cause;
+  if (
+    result.failure &&
+    getExtractKind(result.contentType) !== "json" &&
+    !signal?.aborted &&
+    getText(result.content)
+  ) {
+    try {
+      const saved = await saveOutput(
+        getText(result.content),
+        result,
+        getOutputDirectory,
+        sourceInfo,
+        signal,
+        maxSessionStorageBytes,
+      );
+      details = { ...details, fullOutputPath: saved.fullOutputPath };
+    } catch (error) {
+      if (!signal?.aborted) {
+        const diagnostic = getText(
+          buildToolFailure("Extract", {}, error).content,
+        );
+        sourceInfo += `\nCould not save partial output: ${diagnostic}`;
+      }
+    }
+  }
+  return outputFailure(details, cause, signal, result.content, sourceInfo);
+}
+
 export async function buildExtractOutput(
   result: ExtractResponse,
   getOutputDirectory: () => Promise<string>,
+  maxSessionStorageBytes: number,
   signal?: AbortSignal,
 ): Promise<AgentToolResult<ExtractToolDetails>> {
   const details = {
@@ -155,6 +207,9 @@ export async function buildExtractOutput(
     contentType: result.contentType,
     byteLength: result.byteLength,
     ...(result.originalPdfPath && { originalPdfPath: result.originalPdfPath }),
+    ...(result.failure && { incomplete: true }),
+    ...(result.stopReason && { stopReason: result.stopReason }),
+    ...(result.pdfPages && { pdfPages: result.pdfPages }),
   };
   const kind = getExtractKind(result.contentType);
   const sourceInfo =
@@ -163,15 +218,22 @@ export async function buildExtractOutput(
           `Source URL: ${result.sourceUrl}`,
           ...(result.finalUrl ? [`Final URL: ${result.finalUrl}`] : []),
           `Content-Type: ${result.contentType}`,
+          ...(result.pdfPages
+            ? [
+                `PDF pages: ${result.pdfPages.processed} processed of ${result.pdfPages.total ?? "unknown"}; text accepted for ${result.pdfPages.accepted ? `pages 1-${result.pdfPages.accepted}` : "no pages"}.`,
+              ]
+            : []),
+          ...(result.stopReason ? [result.stopReason] : []),
         ].join("\n")
       : "";
   if (signal?.aborted || result.failure) {
-    return outputFailure(
+    return incompleteOutput(
+      result,
       details,
-      result.failure?.cause,
-      signal,
-      result.content,
+      getOutputDirectory,
       sourceInfo,
+      signal,
+      maxSessionStorageBytes,
     );
   }
   const prefix = [fileNotices(details), sourceInfo].filter(Boolean).join("\n");
@@ -197,6 +259,7 @@ export async function buildExtractOutput(
       getOutputDirectory,
       sourceInfo,
       signal,
+      maxSessionStorageBytes,
     );
   } catch (error) {
     return outputFailure(

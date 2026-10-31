@@ -1,21 +1,16 @@
 import { readResponseBody, type ResponseBody } from "../helpers/request";
-import { type ExtractResponse, MAX_TEXT_BYTES, MAX_TEXT_CHARS } from "./shared";
+import type { ExtractResponse } from "./shared";
 
 export async function extractPlainText(
   sourceUrl: string,
   contentType: string,
   res: ResponseBody,
+  maxBytes: number,
   signal?: AbortSignal,
 ): Promise<ExtractResponse> {
   const raw = new TextDecoder().decode(
-    await readResponseBody(res, MAX_TEXT_BYTES, signal),
+    await readResponseBody(res, maxBytes, signal),
   );
-
-  if (raw.length > MAX_TEXT_CHARS) {
-    throw new Error(
-      `Text content too large after download: ${raw.length} characters`,
-    );
-  }
 
   const content = [
     `Source URL: ${sourceUrl}`,
@@ -29,11 +24,6 @@ export async function extractPlainText(
   return {
     sourceUrl,
     contentType,
-    content: [
-      {
-        type: "text" as const,
-        text: content,
-      },
-    ],
+    content: [{ type: "text", text: content }],
   };
 }

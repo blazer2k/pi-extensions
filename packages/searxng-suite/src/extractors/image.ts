@@ -1,6 +1,6 @@
 import { formatSize } from "@earendil-works/pi-coding-agent";
 import { readResponseBody, type ResponseBody } from "../helpers/request";
-import { MAX_IMAGE_BYTES, type ExtractResponse } from "./shared";
+import type { ExtractResponse } from "./shared";
 
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -13,13 +13,14 @@ export async function extractImage(
   sourceUrl: string,
   contentType: string,
   res: ResponseBody,
+  maxBytes: number,
   signal?: AbortSignal,
 ): Promise<ExtractResponse> {
   if (!SUPPORTED_IMAGE_TYPES.has(contentType)) {
     throw new Error(`Unsupported image type: ${contentType}`);
   }
 
-  const buffer = await readResponseBody(res, MAX_IMAGE_BYTES, signal);
+  const buffer = await readResponseBody(res, maxBytes, signal);
   const base64 = buffer.toString("base64");
 
   return {

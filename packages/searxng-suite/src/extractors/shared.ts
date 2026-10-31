@@ -1,9 +1,4 @@
-export const MAX_TEXT_BYTES = 1024 * 1024;
-export const MAX_TEXT_CHARS = 500_000;
-export const MAX_HTML_BYTES = 2 * 1024 * 1024;
-export const MAX_HTML_CHARS = 1_000_000;
-export const MAX_PDF_BYTES = 50 * 1024 * 1024;
-export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+import { formatSize } from "@earendil-works/pi-coding-agent";
 
 export type ExtractKind = "html" | "text" | "json" | "pdf" | "image";
 
@@ -18,6 +13,8 @@ export interface ExtractResponse {
   byteLength?: number;
   originalPdfPath?: string;
   failure?: { cause: unknown };
+  stopReason?: string;
+  pdfPages?: { total?: number; processed: number; accepted: number };
   content: ExtractContent[];
 }
 
@@ -43,6 +40,34 @@ export function getExtractKind(contentType: string): ExtractKind | null {
   }
 
   return null;
+}
+
+export function limitExtractContent(
+  result: ExtractResponse,
+  maxBytes: number,
+): ExtractResponse {
+  const text = result.content
+    .filter((item) => item.type === "text")
+    .map((item) => item.text)
+    .join("\n\n");
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return result;
+  const cause = new Error(
+    `Converted text exceeds maxContentBytes (${formatSize(maxBytes)}). Increase it in pi-searxng.json if needed.`,
+  );
+  const preview =
+    getExtractKind(result.contentType) === "json"
+      ? ""
+      : new TextDecoder().decode(Buffer.from(text).subarray(0, maxBytes), {
+          stream: true,
+        });
+  return {
+    ...result,
+    failure: result.failure ?? { cause },
+    content: [
+      ...(preview ? [{ type: "text" as const, text: preview }] : []),
+      ...result.content.filter((item) => item.type === "image"),
+    ],
+  };
 }
 
 export function truncateContent(

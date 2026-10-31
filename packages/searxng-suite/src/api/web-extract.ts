@@ -1,7 +1,11 @@
 import { Agent, fetch } from "undici";
 import { createTimeoutSignal, getContentType } from "../helpers/request";
 import { getValidUrl, lookupPublic } from "../helpers/url";
-import { type ExtractResponse, getExtractKind } from "../extractors/shared";
+import {
+  type ExtractResponse,
+  getExtractKind,
+  limitExtractContent,
+} from "../extractors/shared";
 import { extractHtml } from "../extractors/html";
 import { extractPlainText } from "../extractors/text";
 import { extractJson } from "../extractors/json";
@@ -13,6 +17,9 @@ export interface ExtractOptions {
   signal?: AbortSignal;
   allowPrivateUrls: boolean;
   getOutputDirectory?: () => Promise<string>;
+  maxContentBytes: number;
+  pdfProcessingTimeoutMs: number;
+  maxSessionStorageBytes: number;
 }
 
 const headers: Record<string, string> = {
@@ -54,6 +61,7 @@ export async function webExtract(
     connect: { lookup: options.allowPrivateUrls ? undefined : lookupPublic },
   });
   const timeout = createTimeoutSignal(options.timeoutMs, options.signal);
+  const maxBytes = options.maxContentBytes;
   const request = (target: string) =>
     fetch(target, {
       signal: timeout.signal,
@@ -101,6 +109,7 @@ export async function webExtract(
           validatedUrl,
           contentType,
           res,
+          maxBytes,
           timeout.signal,
           finalUrl,
         );
@@ -111,6 +120,7 @@ export async function webExtract(
           validatedUrl,
           contentType,
           res,
+          maxBytes,
           timeout.signal,
         );
         break;
@@ -120,6 +130,7 @@ export async function webExtract(
           validatedUrl,
           contentType,
           res,
+          maxBytes,
           timeout.signal,
         );
         break;
@@ -133,6 +144,13 @@ export async function webExtract(
           contentType,
           res,
           options.getOutputDirectory,
+          {
+            maxContentBytes: maxBytes,
+            maxSessionStorageBytes: options.maxSessionStorageBytes,
+            pdfProcessingTimeoutMs: options.pdfProcessingTimeoutMs,
+            stopDownloadTimeout: timeout.stopTimer,
+            finalUrl: finalUrl !== validatedUrl ? finalUrl : undefined,
+          },
           timeout.signal,
         );
         break;
@@ -142,6 +160,7 @@ export async function webExtract(
           validatedUrl,
           contentType,
           res,
+          maxBytes,
           timeout.signal,
         );
         break;
@@ -153,12 +172,12 @@ export async function webExtract(
     }
     if (finalUrl !== validatedUrl) {
       result.finalUrl = finalUrl;
-      if (kind !== "json") {
+      if (kind !== "json" && kind !== "pdf") {
         const text = result.content.find((item) => item.type === "text");
         if (text) text.text = `Final URL: ${finalUrl}\n${text.text}`;
       }
     }
-    return result;
+    return kind === "pdf" ? result : limitExtractContent(result, maxBytes);
   } catch (err) {
     timeout.signal.throwIfAborted();
     if (

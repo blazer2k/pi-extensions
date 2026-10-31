@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
 import { readResponseBody, type ResponseBody } from "../helpers/request";
-import { type ExtractResponse, MAX_HTML_BYTES, MAX_HTML_CHARS } from "./shared";
+import type { ExtractResponse } from "./shared";
 import { extractContent } from "./content-extractor";
 
 const turndown = new TurndownService({
@@ -46,18 +46,14 @@ export async function extractHtml(
   sourceUrl: string,
   contentType: string,
   res: ResponseBody,
+  maxBytes: number,
   signal?: AbortSignal,
   baseUrl = sourceUrl,
 ): Promise<ExtractResponse> {
   const raw = new TextDecoder().decode(
-    await readResponseBody(res, MAX_HTML_BYTES, signal),
+    await readResponseBody(res, maxBytes, signal),
   );
-
-  if (raw.length > MAX_HTML_CHARS) {
-    throw new Error(
-      `Content too large after download: ${raw.length} characters`,
-    );
-  }
+  signal?.throwIfAborted();
 
   const { document } = parseHTML(raw);
   const body = document.body;
@@ -81,14 +77,10 @@ export async function extractHtml(
     markdown,
   ].join("\n");
 
+  signal?.throwIfAborted();
   return {
     sourceUrl,
     contentType,
-    content: [
-      {
-        type: "text" as const,
-        text: content,
-      },
-    ],
+    content: [{ type: "text", text: content }],
   };
 }

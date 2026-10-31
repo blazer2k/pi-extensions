@@ -21,7 +21,7 @@ This extension provides two LLM-callable tools:
 
 JSON is validated as UTF-8 without re-serializing it. One leading UTF-8 BOM is removed; otherwise the original text, whitespace, escapes, keys, and number spellings are preserved. Source and final URLs are separate from the JSON payload.
 
-JSON's download limit is 1 MB, including any BOM. Charset parameters are accepted, but the body must be UTF-8.
+JSON uses the shared `maxContentBytes` download limit, including any BOM. Charset parameters are accepted, but the body must be UTF-8. An oversized or invalid JSON response fails without saving a partial JSON document.
 
 ![Example: searching and extracting university admission info](images/example.webp)
 
@@ -33,11 +33,21 @@ Oversized text is saved completely before returning a limited preview and the ac
 
 Use available file tools to read or search these paths. Line-based reading cannot split a single huge JSON line. Completed files survive `/reload` while they exist, but OS temporary storage is not a permanent archive. There is no catalog, automatic refetch, or compaction recovery. If saving fails, the tool reports a native error and any available bounded preview, without claiming a saved file.
 
-Every PDF that finishes downloading within the current 50-MB limit is saved unchanged as `original.pdf` before text conversion. Its absolute path is returned even when extracted text is short, empty, or conversion fails. Oversized text uses `content.txt` in the same directory; short text needs no separate text file. A required original-save failure is reported as an error and conversion does not start.
+Every PDF that finishes downloading within `maxContentBytes` and the session storage allowance is saved unchanged as `original.pdf` before text conversion. Its absolute path is returned even when extracted text is short, empty, or conversion fails. Oversized text uses `content.txt` in the same directory; short text needs no separate text file. A required original-save failure is reported as an error and conversion does not start.
 
 No readable text does not prove that a PDF is empty or scanned. The retained original can be inspected using available PDF, OCR, or visual-processing tools/skills, but this extension does not run an OCR or vision pipeline.
 
-Larger configurable resource budgets are not implemented yet. Existing download and input-character limits still apply; saved text is the complete accepted extraction, not an unlimited download or an unchanged copy of HTML/PDF bytes. Only the separately saved original PDF is a byte-for-byte copy of its downloaded body.
+## Resource limits
+
+`maxContentBytes` independently limits each downloaded body and the accepted converted text, including source/page headers in saved text. It is not a combined download-plus-text allowance or a memory limit. All formats use the same ceiling; there are no separate format limits or fixed input-character cutoffs.
+
+PDF downloads stream into an unfinished file and become `original.pdf` only after EOF and successful closure. PDF loading and sequential page conversion run in a Node worker. `pdfProcessingTimeoutMs` starts after the original is saved; timeout or cancellation terminates the worker and waits for it to exit. There is no configurable page cap. HTML/JSON parsing has byte limits but no hard CPU-time deadline. Neither byte limits nor workers impose a hard process-memory limit.
+
+A stopped extraction is a native error, not a successful full extraction. The response reports the stop reason and, for PDFs, total pages when known, pages processed, and pages whose text was accepted. A processed page rejected by the text budget is counted as processed, not accepted. Available partial text is saved as `content.partial.txt` or `content.partial.md` and labeled partial, even if it would fit inline. JSON is kept complete and valid or rejected. Cancellation does not start new partial-file writes; already completed originals/text files remain available.
+
+`maxSessionStorageBytes` counts retained and in-progress file-content bytes in the session folder, including originals and converted text. Extension writes in the same session are serialized, including streamed downloads; usage is read from disk again on each write and after reload. A full allowance refuses new saves without evicting earlier files. Files changed by other tools affect the next check; this is not a cross-process lock, a machine-wide disk guarantee, or an allowance for filesystem metadata. Small non-PDF inline results still do not access session storage.
+
+The larger defaults are provisional, not benchmarked book-size or memory guarantees. Saved text is the complete accepted extraction unless explicitly labeled partial; it is not an unchanged copy of HTML/PDF bytes. Only the separately saved original PDF is a byte-for-byte copy of its completed downloaded body.
 
 ## Requirements
 
@@ -78,7 +88,10 @@ Edit `pi-searxng.json` inside Pi's agent directory, usually `~/.pi/agent/pi-sear
 {
   "maxResults": 10,
   "agentCanLimitResults": false,
-  "timeoutMs": 15000,
+  "timeoutMs": 180000,
+  "pdfProcessingTimeoutMs": 300000,
+  "maxContentBytes": 104857600,
+  "maxSessionStorageBytes": 1073741824,
   "safesearch": 0,
   "agentCanPickCategory": false,
   "allowPrivateUrls": false,
@@ -86,15 +99,18 @@ Edit `pi-searxng.json` inside Pi's agent directory, usually `~/.pi/agent/pi-sear
 }
 ```
 
-| Setting                | Default | Meaning                                                                                                                   |
-| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `maxResults`           | `10`    | Maximum results to return. Any integer >= 1, without a hard-coded upper bound.                                            |
-| `agentCanLimitResults` | `false` | Let the agent request fewer results through the optional `maxResults` tool argument, from 1 up to the configured maximum. |
-| `timeoutMs`            | `15000` | Request timeout in milliseconds, from 1000 to 120000.                                                                     |
-| `safesearch`           | `0`     | SafeSearch: 0 (off), 1 (moderate), or 2 (strict).                                                                         |
-| `agentCanPickCategory` | `false` | Let the agent choose one of the supported search categories.                                                              |
-| `allowPrivateUrls`     | `false` | Permit local/private destinations for `web_extract`.                                                                      |
-| `verbose`              | `false` | Show result text instead of the compact summary.                                                                          |
+| Setting                  | Default      | Meaning                                                                                                                                                     |
+| ------------------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxResults`             | `10`         | Maximum results to return. Any integer >= 1, without a hard-coded upper bound.                                                                              |
+| `agentCanLimitResults`   | `false`      | Let the agent request fewer results through the optional `maxResults` tool argument, from 1 up to the configured maximum.                                   |
+| `timeoutMs`              | `180000`     | Shared search/extraction network timeout, including response bodies; 1000-2147483647 ms. Existing valid numeric values, including fractions, are preserved. |
+| `pdfProcessingTimeoutMs` | `300000`     | PDF loading/conversion deadline; integer 1-2147483647 ms.                                                                                                   |
+| `maxContentBytes`        | `104857600`  | Shared download/converted-text ceiling: 100 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                         |
+| `maxSessionStorageBytes` | `1073741824` | Session file-content allowance: 1,024 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                               |
+| `safesearch`             | `0`          | SafeSearch: 0 (off), 1 (moderate), or 2 (strict).                                                                                                           |
+| `agentCanPickCategory`   | `false`      | Let the agent choose one of the supported search categories.                                                                                                |
+| `allowPrivateUrls`       | `false`      | Permit local/private destinations for `web_extract`.                                                                                                        |
+| `verbose`                | `false`      | Show result text instead of the compact summary.                                                                                                            |
 
 All settings take effect at startup or `/reload`, including the tool schemas. Increasing `maxResults` only retains more results from one SearXNG response; it does not add pagination.
 
@@ -122,7 +138,7 @@ When enabled, the agent receives the category choices in the tool schema.
 - `web_extract` blocks local/private IPv4 and IPv6 destinations by default, including hostname lookups and redirects. Non-public, reserved, and IPv4 translation/tunnel ranges are also blocked conservatively.
 - Every redirect is checked, with at most 20 redirects. The checked DNS addresses are passed directly to the connection; HTML links use the final page URL.
 - `allowPrivateUrls: true` permits local/private destinations for `web_extract`. Local SearXNG instances remain supported independently of this setting.
-- Content size limits prevent oversized downloads (2 MB HTML, 1 MB text/JSON, 50 MB PDF/images).
+- `maxContentBytes` bounds arriving download bytes regardless of the declared length, and bounds accepted converted text. Large HTML/PDF parsing can still require substantially more memory than the download size.
 - All search and extract results are flagged as untrusted content in the LLM context, including saved extraction files read later.
 
 Sizes follow Pi's 1024-based convention: 1 KB = 1024 bytes and 1 MB = 1,048,576 bytes. Displays use Pi's `KB`/`MB` labels and formatter.

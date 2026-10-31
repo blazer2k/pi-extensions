@@ -13,7 +13,7 @@ export interface ResponseBody {
 export function createTimeoutSignal(
   timeoutMs: number,
   parentSignal?: AbortSignal,
-): { signal: AbortSignal; cleanup: () => void } {
+): { signal: AbortSignal; stopTimer: () => void; cleanup: () => void } {
   const controller = new AbortController();
   const timer = setTimeout(
     () =>
@@ -29,6 +29,7 @@ export function createTimeoutSignal(
 
   return {
     signal,
+    stopTimer: () => clearTimeout(timer),
     cleanup: () => {
       clearTimeout(timer);
       // Stop any unread response body on early failure.
@@ -37,11 +38,21 @@ export function createTimeoutSignal(
   };
 }
 
-export async function readResponseBody(
+export function checkResponseSize(res: ResponseBody, maxBytes: number): void {
+  if (Number(res.headers.get("content-length")) > maxBytes) {
+    throw new Error(contentLimitMessage(maxBytes));
+  }
+}
+
+function contentLimitMessage(maxBytes: number): string {
+  return `Content too large: limit is ${formatSize(maxBytes)} (maxContentBytes). Increase it in pi-searxng.json if needed.`;
+}
+
+export async function* readResponseChunks(
   res: ResponseBody,
   maxBytes: number,
   signal?: AbortSignal,
-): Promise<Buffer> {
+): AsyncGenerator<Uint8Array> {
   const reader = res.body?.getReader();
   const cancel = () => {
     // A slow source cleanup must not hold up a timeout or cancellation.
@@ -51,28 +62,36 @@ export async function readResponseBody(
 
   try {
     signal?.throwIfAborted();
-    const limitMessage = `Content too large: limit is ${formatSize(maxBytes)}`;
-    if (Number(res.headers.get("content-length")) > maxBytes) {
-      throw new Error(limitMessage);
-    }
-    if (!reader) return Buffer.alloc(0);
-
-    const chunks: Uint8Array[] = [];
+    checkResponseSize(res, maxBytes);
+    if (!reader) return;
     let byteLength = 0;
     while (true) {
       const { done, value } = await reader.read();
       signal?.throwIfAborted();
       if (done) break;
       byteLength += value.byteLength;
-      if (byteLength > maxBytes) throw new Error(limitMessage);
-      chunks.push(value);
+      if (byteLength > maxBytes) throw new Error(contentLimitMessage(maxBytes));
+      yield value;
     }
-    return Buffer.concat(chunks, byteLength);
   } finally {
     signal?.removeEventListener("abort", cancel);
     cancel();
     reader?.releaseLock();
   }
+}
+
+export async function readResponseBody(
+  res: ResponseBody,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<Buffer> {
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  for await (const chunk of readResponseChunks(res, maxBytes, signal)) {
+    chunks.push(chunk);
+    byteLength += chunk.byteLength;
+  }
+  return Buffer.concat(chunks, byteLength);
 }
 
 export function getContentType(res: Pick<ResponseBody, "headers">): string {

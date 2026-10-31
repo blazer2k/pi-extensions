@@ -1,4 +1,5 @@
 import type { TruncationResult } from "@earendil-works/pi-coding-agent";
+import type { ExtractResponse } from "../extractors/shared";
 
 export type ToolStatus = "success" | "aborted" | "error";
 
@@ -18,6 +19,9 @@ export interface ExtractToolDetails {
   byteLength?: number;
   fullOutputPath?: string;
   originalPdfPath?: string;
+  incomplete?: boolean;
+  stopReason?: string;
+  pdfPages?: ExtractResponse["pdfPages"];
   // Counts describe the complete tool text, including source metadata.
   truncation?: Pick<
     TruncationResult,

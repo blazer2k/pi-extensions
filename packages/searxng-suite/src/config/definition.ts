@@ -12,9 +12,22 @@ const ConfigSchema = Type.Object(
     // Union wrappers prevent numeric coercion and fractional result counts.
     maxResults: Type.Union([Type.Integer({ minimum: 1 })], { default: 10 }),
     agentCanLimitResults: flag(false),
-    timeoutMs: Type.Union([Type.Number({ minimum: 1000, maximum: 120000 })], {
-      default: 15000,
-    }),
+    timeoutMs: Type.Union(
+      [Type.Number({ minimum: 1000, maximum: 2147483647 })],
+      { default: 180000 },
+    ),
+    pdfProcessingTimeoutMs: Type.Union(
+      [Type.Integer({ minimum: 1, maximum: 2147483647 })],
+      { default: 300000 },
+    ),
+    maxContentBytes: Type.Union(
+      [Type.Integer({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER })],
+      { default: 100 * 1024 * 1024 },
+    ),
+    maxSessionStorageBytes: Type.Union(
+      [Type.Integer({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER })],
+      { default: 1024 * 1024 * 1024 },
+    ),
     safesearch: Type.Union(
       [Type.Literal(0), Type.Literal(1), Type.Literal(2)],
       { default: 0 },
