@@ -6,7 +6,7 @@ import {
   type AgentToolResult,
 } from "@earendil-works/pi-coding-agent";
 import { getExtractKind, type ExtractResponse } from "../extractors/shared";
-import type { ExtractToolDetails } from "../tools/types";
+import type { FetchToolDetails } from "../tools/types";
 import { buildToolFailure, errorMessage } from "./error";
 import {
   removeEmptyExtractionDirectory,
@@ -22,7 +22,7 @@ function getText(content: Array<{ type: string; text?: string }>): string {
 
 function fileNotices(
   details: Pick<
-    ExtractToolDetails,
+    FetchToolDetails,
     "originalPdfPath" | "fullOutputPath" | "incomplete"
   >,
 ): string {
@@ -122,18 +122,18 @@ async function saveOutput(
 }
 
 function outputFailure(
-  details: Omit<ExtractToolDetails, "status">,
+  details: Omit<FetchToolDetails, "status">,
   cause: unknown,
   signal?: AbortSignal,
   content: ExtractResponse["content"] = [],
   sourceInfo = "",
-): AgentToolResult<ExtractToolDetails> {
-  const failure = buildToolFailure("Extract", details, cause, signal);
+): AgentToolResult<FetchToolDetails> {
+  const failure = buildToolFailure("Fetch", details, cause, signal);
   const paths = fileNotices(details);
   if (signal?.aborted && !paths) return failure;
   const body = signal?.aborted ? "" : getText(content);
   const notice = paths
-    ? `Extract incomplete\n${paths}`
+    ? `Fetch incomplete\n${paths}`
     : getText(failure.content);
   const diagnostic = paths
     ? [getText(failure.content), sourceInfo].filter(Boolean).join("\n")
@@ -160,12 +160,12 @@ function outputFailure(
 
 async function incompleteOutput(
   result: ExtractResponse,
-  details: Omit<ExtractToolDetails, "status">,
+  details: Omit<FetchToolDetails, "status">,
   getOutputDirectory: () => Promise<string>,
   sourceInfo: string,
   signal: AbortSignal | undefined,
   maxSessionStorageBytes: number,
-): Promise<AgentToolResult<ExtractToolDetails>> {
+): Promise<AgentToolResult<FetchToolDetails>> {
   const cause = result.failure?.cause;
   if (
     result.failure &&
@@ -186,7 +186,7 @@ async function incompleteOutput(
     } catch (error) {
       if (!signal?.aborted) {
         const diagnostic = getText(
-          buildToolFailure("Extract", {}, error).content,
+          buildToolFailure("Fetch", {}, error).content,
         );
         sourceInfo += `\nCould not save partial output: ${diagnostic}`;
       }
@@ -195,12 +195,12 @@ async function incompleteOutput(
   return outputFailure(details, cause, signal, result.content, sourceInfo);
 }
 
-export async function buildExtractOutput(
+export async function buildFetchOutput(
   result: ExtractResponse,
   getOutputDirectory: () => Promise<string>,
   maxSessionStorageBytes: number,
   signal?: AbortSignal,
-): Promise<AgentToolResult<ExtractToolDetails>> {
+): Promise<AgentToolResult<FetchToolDetails>> {
   const details = {
     url: result.sourceUrl,
     finalUrl: result.finalUrl,

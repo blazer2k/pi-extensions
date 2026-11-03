@@ -15,7 +15,7 @@ export function isTimeoutError(err: unknown): boolean {
 }
 
 export function buildToolFailure<T extends object>(
-  operation: "Search" | "Extract",
+  operation: "Search" | "Fetch",
   details: T,
   err: unknown,
   signal?: AbortSignal,

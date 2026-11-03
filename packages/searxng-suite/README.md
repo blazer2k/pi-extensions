@@ -9,7 +9,7 @@ SearXNG-based web search with category filtering and multi-format URL extraction
 This extension provides two LLM-callable tools:
 
 - **`web_search`:** Search the web via your SearXNG instance with configurable result limits, timeouts, and SafeSearch.
-- **`web_extract`:** Extract content from any URL, supporting multiple formats:
+- **`web_fetch`:** Fetch content from a URL, supporting multiple formats:
 
 | Format     | Output                                                                           |
 | ---------- | -------------------------------------------------------------------------------- |
@@ -18,6 +18,8 @@ This extension provides two LLM-callable tools:
 | JSON       | Original JSON text with separate source info (`application/json`)                |
 | PDF        | Original PDF saved unchanged; text per page when available (no OCR)              |
 | Images     | Attached with metadata (format, size)                                            |
+
+The tools render as `web search` and `web fetch`. TUI Tweaks controls optional capitalization; its default displays `Web search` and `Web fetch`. `web_fetch` replaces `web_extract`; the old identifier is not registered as an alias.
 
 JSON is validated as UTF-8 without re-serializing it. One leading UTF-8 BOM is removed; otherwise the original text, whitespace, escapes, keys, and number spellings are preserved. Source and final URLs are separate from the JSON payload.
 
@@ -109,7 +111,7 @@ Edit `pi-searxng.json` inside Pi's agent directory, usually `~/.pi/agent/pi-sear
 | `maxSessionStorageBytes` | `1073741824` | Session file-content allowance: 1,024 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                               |
 | `safesearch`             | `0`          | SafeSearch: 0 (off), 1 (moderate), or 2 (strict).                                                                                                           |
 | `agentCanPickCategory`   | `false`      | Let the agent choose one of the supported search categories.                                                                                                |
-| `allowPrivateUrls`       | `false`      | Permit local/private destinations for `web_extract`.                                                                                                        |
+| `allowPrivateUrls`       | `false`      | Permit local/private destinations for `web_fetch`.                                                                                                          |
 | `verbose`                | `false`      | Show result text instead of the compact summary.                                                                                                            |
 
 All settings take effect at startup or `/reload`, including the tool schemas. Increasing `maxResults` only retains more results from one SearXNG response; it does not add pagination.
@@ -133,11 +135,11 @@ When enabled, the agent receives the category choices in the tool schema.
 
 ## Security
 
-`web_extract` sends requests from the machine running Pi. An untrusted website could redirect a request to a local service, or try to trick the agent into reading private data and sending it elsewhere. The default block limits that access. It does not sandbox Pi's other tools.
+`web_fetch` sends requests from the machine running Pi. An untrusted website could redirect a request to a local service, or try to trick the agent into reading private data and sending it elsewhere. The default block limits that access. It does not sandbox Pi's other tools.
 
-- `web_extract` blocks local/private IPv4 and IPv6 destinations by default, including hostname lookups and redirects. Non-public, reserved, and IPv4 translation/tunnel ranges are also blocked conservatively.
+- `web_fetch` blocks local/private IPv4 and IPv6 destinations by default, including hostname lookups and redirects. Non-public, reserved, and IPv4 translation/tunnel ranges are also blocked conservatively.
 - Every redirect is checked, with at most 20 redirects. The checked DNS addresses are passed directly to the connection; HTML links use the final page URL.
-- `allowPrivateUrls: true` permits local/private destinations for `web_extract`. Local SearXNG instances remain supported independently of this setting.
+- `allowPrivateUrls: true` permits local/private destinations for `web_fetch`. Local SearXNG instances remain supported independently of this setting.
 - `maxContentBytes` bounds arriving download bytes regardless of the declared length, and bounds accepted converted text. Large HTML/PDF parsing can still require substantially more memory than the download size.
 - All search and extract results are flagged as untrusted content in the LLM context, including saved extraction files read later.
 

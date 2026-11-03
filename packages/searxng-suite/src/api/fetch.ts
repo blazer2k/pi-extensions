@@ -12,7 +12,7 @@ import { extractJson } from "../extractors/json";
 import { extractPdf } from "../extractors/pdf";
 import { extractImage } from "../extractors/image";
 
-export interface ExtractOptions {
+export interface FetchOptions {
   timeoutMs: number;
   signal?: AbortSignal;
   allowPrivateUrls: boolean;
@@ -47,9 +47,9 @@ function adaptRedditUrl(url: string): string {
   return url;
 }
 
-export async function webExtract(
+export async function webFetch(
   url: string,
-  options: ExtractOptions,
+  options: FetchOptions,
 ): Promise<ExtractResponse> {
   const validatedUrl = getValidUrl(url, options.allowPrivateUrls);
 

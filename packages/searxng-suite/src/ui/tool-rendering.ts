@@ -8,7 +8,7 @@ import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import type {
   ToolStatus,
   SearchToolDetails,
-  ExtractToolDetails,
+  FetchToolDetails,
 } from "../tools/types";
 import { getExtractTextLength } from "../extractors/shared";
 
@@ -55,12 +55,12 @@ export function buildToolCallText(
   return `${theme.fg("toolTitle", toolName)} ${query ?? ""}${category}`;
 }
 
-function isImageResult(result: AgentToolResult<ExtractToolDetails>): boolean {
+function isImageResult(result: AgentToolResult<FetchToolDetails>): boolean {
   return result.details.contentType?.startsWith("image/") ?? false;
 }
 
 export function buildToolTextOutput(
-  result: AgentToolResult<ExtractToolDetails | SearchToolDetails>,
+  result: AgentToolResult<FetchToolDetails | SearchToolDetails>,
   options: ToolRenderResultOptions,
   theme: Theme,
   maxCollapsedLines = 20,
@@ -101,7 +101,7 @@ export function buildToolTextOutput(
 }
 
 export function buildToolResultText<
-  T extends SearchToolDetails | ExtractToolDetails,
+  T extends SearchToolDetails | FetchToolDetails,
 >(
   result: AgentToolResult<T>,
   options: ToolRenderResultOptions,
@@ -128,8 +128,8 @@ export function buildSearchResultsSummary(
   );
 }
 
-export function buildExtractContentSummary(
-  result: AgentToolResult<ExtractToolDetails>,
+export function buildFetchContentSummary(
+  result: AgentToolResult<FetchToolDetails>,
   theme: Theme,
 ): string {
   if (isImageResult(result)) {

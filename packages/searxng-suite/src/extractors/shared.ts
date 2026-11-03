@@ -70,19 +70,10 @@ export function limitExtractContent(
   };
 }
 
-export function truncateContent(
-  content: string,
-  maxChars: number,
-  displayString: "..." | "verbose" = "...",
-): string {
+export function truncateContent(content: string, maxChars: number): string {
   if (content.length <= maxChars) return content;
 
-  const display =
-    displayString === "verbose"
-      ? `\n\n[Content truncated at ${maxChars} characters]`
-      : "...";
-
-  return `${content.slice(0, maxChars)}${display}`;
+  return `${content.slice(0, maxChars)}...`;
 }
 
 export function getExtractTextLength(

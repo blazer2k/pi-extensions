@@ -11,7 +11,7 @@ export interface SearchToolDetails {
   error?: string;
 }
 
-export interface ExtractToolDetails {
+export interface FetchToolDetails {
   url: string;
   finalUrl?: string;
   status: ToolStatus;

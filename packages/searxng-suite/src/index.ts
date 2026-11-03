@@ -1,7 +1,7 @@
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig } from "./config/store";
-import { registerSearchTool } from "./tools/search-tool";
-import { registerExtractTool } from "./tools/extract-tool";
+import { registerSearchTool } from "./tools/search";
+import { registerFetchTool } from "./tools/fetch";
 import { errorMessage } from "./helpers/error";
 
 export default function (pi: ExtensionAPI) {
@@ -17,5 +17,5 @@ export default function (pi: ExtensionAPI) {
   });
 
   registerSearchTool(pi);
-  registerExtractTool(pi);
+  registerFetchTool(pi);
 }
