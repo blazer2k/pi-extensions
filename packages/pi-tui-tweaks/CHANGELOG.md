@@ -2,19 +2,20 @@
 
 The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
-## [Unreleased]
+## [0.2.1] - 2026-11-04
 
 **Changed**
 
-- Updated workspace Pi dependencies to `1.5.0` and explicitly declared the package changelog path.
-- Reuse Bash and Codemode highlighting across unchanged renderer updates, highlight only the displayed command/script view, and skip unchanged Write context prefixes while streaming.
+- Updated editor and tool rendering compatibility for Pi `1.5.0`, which is now the minimum supported version.
+- Declared the package changelog path so Pi can show release notes after updates.
+- Bash and Codemode reuse syntax highlighting across unchanged renderer updates and highlight only the displayed command/script view. Streaming Write output skips unchanged context prefixes.
 
 **Fixed**
 
 - Tool expansion hints use Pi's host-provided keybindings, including when an extension resolves a separate copy of Pi.
-- Refresh cached syntax colors on theme changes and native invalidation, including after deferred language grammars load.
-- Finish streamed Write output with full-document highlighting so multiline syntax beyond the first 50 lines is corrected on completion.
-- Strip complete private-prefix ANSI sequences, including SGR mouse reports, without consuming text after bare ESC keypad-mode sequences.
+- Cached syntax colors refresh on theme changes and native invalidation, including after deferred language grammars load.
+- Completed streamed Write output uses full-document highlighting, correcting multiline syntax beyond the first 50 lines.
+- Fixed stray terminal codes appearing in tool output while preserving normal text.
 
 ## 0.2.0 - 2026-10-25
 

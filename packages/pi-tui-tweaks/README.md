@@ -93,6 +93,8 @@ Pi handles compaction and cancellation. Context-overflow notices remain visible.
 
 Setting `tools.enabled` to `false` leaves tool display to Pi and other extensions.
 
+When `tools.showExpansionHint` is enabled, expand/collapse hints follow Pi's configured keybindings.
+
 `tools.expandedOutputLimit` counts logical items or lines, not wrapped screen rows. Lists show the beginning and end, with odd limits giving the extra item to the beginning. A limit of `1` shows one beginning item. Generic text shows its first lines. The setting does not cap Bash, Read, Write, Edit, Codemode, or expanded errors.
 
 ## Editor
@@ -114,7 +116,7 @@ Compact editor with `editor.color: "thinking"`, square tool-tree connectors, and
 
 ## Compatibility
 
-Tested with Pi `1.5.0`.
+Requires Pi `1.5.0` or newer. Tested with Pi `1.5.0`.
 
 Tools that draw their entire tool-call block keep their own layout.
 
