@@ -32,6 +32,8 @@ type WriteHighlightCache = {
   rawContent: string;
   sourceLines: string[];
   highlightedLines: string[];
+  colors: Theme["colors"];
+  fullHighlight: boolean;
 };
 
 type WriteRenderState = BaseRenderState & {
@@ -65,6 +67,7 @@ function refreshHighlightContext(cache: WriteHighlightCache): void {
 function rebuildHighlightCache(
   rawPath: string | null,
   content: string,
+  colors: Theme["colors"],
 ): WriteHighlightCache | undefined {
   const lang = rawPath ? getLanguageFromPath(rawPath) : undefined;
   if (!lang) return undefined;
@@ -75,6 +78,8 @@ function rebuildHighlightCache(
     rawPath,
     lang,
     rawContent: content,
+    colors,
+    fullHighlight: true,
     sourceLines,
     highlightedLines: sourceLines.map(
       (line, index) => highlighted[index] ?? highlightSingleLine(line, lang),
@@ -86,6 +91,8 @@ function updateHighlightCache(
   cache: WriteHighlightCache | undefined,
   rawPath: string | null,
   content: string,
+  theme: Theme,
+  isPartial: boolean,
 ): WriteHighlightCache | undefined {
   const lang = rawPath ? getLanguageFromPath(rawPath) : undefined;
   if (!lang) return undefined;
@@ -93,9 +100,11 @@ function updateHighlightCache(
     !cache ||
     cache.rawPath !== rawPath ||
     cache.lang !== lang ||
+    cache.colors !== theme.colors ||
+    (!isPartial && (!cache.fullHighlight || cache.rawContent !== content)) ||
     !content.startsWith(cache.rawContent)
   ) {
-    return rebuildHighlightCache(rawPath, content);
+    return rebuildHighlightCache(rawPath, content, theme.colors);
   }
   if (content.length === cache.rawContent.length) return cache;
 
@@ -114,7 +123,8 @@ function updateHighlightCache(
     cache.highlightedLines.push(highlightSingleLine(line, cache.lang));
   }
   cache.rawContent = content;
-  refreshHighlightContext(cache);
+  cache.fullHighlight = false;
+  if (lastIndex < WRITE_CONTEXT_HIGHLIGHT_LINES) refreshHighlightContext(cache);
   return cache;
 }
 
@@ -123,11 +133,14 @@ function getHighlightedWriteLines(
   path: string | undefined,
   content: string,
   theme: Theme,
+  isPartial: boolean,
 ): string[] {
   state.highlightCache = updateHighlightCache(
     state.highlightCache,
     path ?? null,
     content,
+    theme,
+    isPartial,
   );
 
   const sourceLines = content.split("\n");
@@ -189,6 +202,7 @@ function formatWriteResult(
       args.path,
       args.content,
       theme,
+      options.isPartial,
     ).map(
       (line) =>
         formatTreeLine(line, {
@@ -213,6 +227,9 @@ export function patchWriteTool(): ToolRenderers {
         staticActive: toolCtx.expanded,
       });
 
+      text.onInvalidate = () => {
+        state.highlightCache = undefined;
+      };
       const fullPath = renderPath(renderArgs.path, theme, toolCtx.cwd);
       text.setText((width) => {
         const title = theme.fg(
@@ -263,6 +280,9 @@ export function patchWriteTool(): ToolRenderers {
         toolCtx.outputPad,
       );
 
+      text.onInvalidate = () => {
+        state.highlightCache = undefined;
+      };
       const details = result.details as
         | { truncation?: { truncated?: boolean } }
         | undefined;

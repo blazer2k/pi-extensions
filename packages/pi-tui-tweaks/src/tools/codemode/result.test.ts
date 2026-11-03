@@ -850,13 +850,13 @@ describe("Codemode call", () => {
     try {
       initTheme("dark", false);
       definition.renderCall!({ code }, theme, context).render(120);
-      const darkPreview = state.callHighlightCache!.preview;
+      const darkPreview = state.callHighlightCache!.highlighted;
       initTheme("light", false);
       definition.renderCall!({ code }, theme, context).render(120);
-      expect(state.callHighlightCache!.preview).toBe(
+      expect(state.callHighlightCache!.highlighted).toBe(
         highlightCode(code, "javascript").join("\n"),
       );
-      expect(state.callHighlightCache!.preview).not.toBe(darkPreview);
+      expect(state.callHighlightCache!.highlighted).not.toBe(darkPreview);
     } finally {
       initTheme(previousTheme, false);
     }

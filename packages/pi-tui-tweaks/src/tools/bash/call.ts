@@ -26,21 +26,27 @@ type BashCallContext = {
   invalidate: () => void;
 };
 
-function getHighlightedCommands(
+function getHighlightedCommand(
   state: BashRenderState,
   source: string,
   collapsedSource: string,
-): NonNullable<BashRenderState["callHighlightCache"]> {
-  if (state.hasResult !== true && state.callHighlightCache?.source === source) {
-    return state.callHighlightCache;
+  expanded: boolean,
+  theme: Theme,
+): string {
+  const colors = theme.colors;
+  if (
+    state.callHighlightCache?.source !== source ||
+    state.callHighlightCache.colors !== colors
+  ) {
+    state.callHighlightCache = { source, colors };
   }
-
-  state.callHighlightCache = {
-    source,
-    expandedCommand: highlightCode(source, "bash").join("\n"),
-    collapsedCommand: highlightCode(collapsedSource, "bash").join("\n"),
-  };
-  return state.callHighlightCache;
+  const cache = state.callHighlightCache;
+  const key = expanded ? "expandedCommand" : "collapsedCommand";
+  return (cache[key] ??=
+    (source === collapsedSource
+      ? (cache.expandedCommand ?? cache.collapsedCommand)
+      : undefined) ??
+    highlightCode(expanded ? source : collapsedSource, "bash").join("\n"));
 }
 
 export function renderBashCall(
@@ -59,13 +65,14 @@ export function renderBashCall(
       ? sanitizeMultilineDisplayText(args.command)
       : "...";
   const collapsedSource = command.replace(/\s+/g, " ").trim();
-  const { expandedCommand, collapsedCommand: highlightedCollapsedCommand } =
-    getHighlightedCommands(state, command, collapsedSource);
   const timeoutText = args.timeout ? `(timeout ${args.timeout}s)` : "";
   const inlineTimeoutSuffix = timeoutText
     ? theme.fg("dim", ` ${timeoutText}`)
     : "";
   const text = getCallText(theme, toolContext.outputPad);
+  text.onInvalidate = () => {
+    state.callHighlightCache = undefined;
+  };
   text.setText((width) => {
     const title = theme.fg(
       "toolTitle",
@@ -89,10 +96,17 @@ export function renderBashCall(
     const { prefix } = getCallPrefix(state, theme, toolContext, {
       staticActive: expanded,
     });
+    const highlightedCommand = getHighlightedCommand(
+      state,
+      command,
+      collapsedSource,
+      expanded,
+      theme,
+    );
     const visibleCommand = expanded
-      ? expandedCommand
+      ? highlightedCommand
       : truncateToWidth(
-          highlightedCollapsedCommand,
+          highlightedCommand,
           commandBudget,
           theme.fg("dim", "..."),
         );

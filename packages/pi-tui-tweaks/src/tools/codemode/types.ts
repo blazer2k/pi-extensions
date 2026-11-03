@@ -11,7 +11,7 @@ export type CodemodeRenderState = BaseRenderState & {
   nativeResult?: Component;
   callHighlightCache?: {
     source: string;
-    preview: string;
+    highlighted: string;
     colors?: Theme["colors"];
   };
 };

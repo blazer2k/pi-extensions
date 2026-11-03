@@ -95,19 +95,20 @@ describe("bash renderCall", () => {
       state,
     });
 
-    def.renderCall!({ command: "echo one" }, theme, context);
+    def.renderCall!({ command: "echo one" }, theme, context).render(120);
     const firstCache = state.callHighlightCache;
-    def.renderCall!({ command: "echo one" }, theme, context);
+    def.renderCall!({ command: "echo one" }, theme, context).render(120);
     expect(state.callHighlightCache).toBe(firstCache);
 
-    def.renderCall!({ command: "echo two" }, theme, context);
+    def.renderCall!({ command: "echo two" }, theme, context).render(120);
     expect(state.callHighlightCache).not.toBe(firstCache);
   });
 
-  it("refreshes completed command colors after a theme change", () => {
+  it("refreshes completed command colors after a theme change", async () => {
+    const { theme } =
+      await import("../../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js");
     const def = setupBashTool();
     const state: BashRenderState = {};
-    const theme = mkTheme();
     const context = mkToolCtx({
       executionStarted: false,
       isPartial: false,
@@ -116,16 +117,16 @@ describe("bash renderCall", () => {
 
     try {
       initTheme("dark");
-      def.renderCall!({ command: `echo "$HOME"` }, theme, context);
+      def.renderCall!({ command: `echo "$HOME"` }, theme, context).render(120);
       const darkCache = state.callHighlightCache;
 
       state.hasResult = true;
       initTheme("light");
-      def.renderCall!({ command: `echo "$HOME"` }, theme, context);
+      def.renderCall!({ command: `echo "$HOME"` }, theme, context).render(120);
 
       expect(state.callHighlightCache).not.toBe(darkCache);
-      expect(state.callHighlightCache?.expandedCommand).not.toBe(
-        darkCache?.expandedCommand,
+      expect(state.callHighlightCache?.collapsedCommand).not.toBe(
+        darkCache?.collapsedCommand,
       );
     } finally {
       initTheme("dark");

@@ -192,6 +192,8 @@ function wrapTreeText(
 type TreeTextSource = string | ((width: number) => string);
 
 class TreeText extends Text {
+  // Native invalidation also covers deferred syntax grammar loading.
+  onInvalidate?: () => void;
   private sourceText: TreeTextSource = "";
   private sourceComponent?: Component;
   private renderedSource?: TreeTextSource;
@@ -220,6 +222,7 @@ class TreeText extends Text {
   }
 
   override invalidate(): void {
+    this.onInvalidate?.();
     this.sourceComponent?.invalidate();
     this.renderedSource = undefined;
     super.invalidate();

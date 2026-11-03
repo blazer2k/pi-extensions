@@ -14,6 +14,25 @@ import { getCallPrefix, getCallText } from "../rendering/tree";
 import type { CodemodeRenderState } from "./types";
 import type { CustomToolRenderingReporter } from "../custom-tools/types";
 
+function getHighlightedScript(
+  state: CodemodeRenderState,
+  source: string,
+  theme: Theme,
+): string {
+  const colors = theme.colors;
+  if (
+    state.callHighlightCache?.source !== source ||
+    state.callHighlightCache.colors !== colors
+  ) {
+    state.callHighlightCache = {
+      source,
+      colors,
+      highlighted: highlightCode(source, "javascript").join("\n"),
+    };
+  }
+  return state.callHighlightCache.highlighted;
+}
+
 export function renderCodemodeCall(
   native: ToolRenderers,
   args: unknown,
@@ -30,22 +49,10 @@ export function renderCodemodeCall(
   const code = (args as { code?: unknown } | undefined)?.code;
   const source =
     typeof code === "string" ? sanitizeMultilineDisplayText(code) : "...";
-  const colors = theme.colors;
-  if (
-    state.hasResult === true ||
-    state.callHighlightCache?.source !== source ||
-    state.callHighlightCache.colors !== colors
-  ) {
-    state.callHighlightCache = {
-      source,
-      colors,
-      preview: highlightCode(source.split("\n")[0] ?? "", "javascript").join(
-        "\n",
-      ),
-    };
-  }
-  const preview = state.callHighlightCache.preview;
   const text = getCallText(theme, context.outputPad);
+  text.onInvalidate = () => {
+    state.callHighlightCache = undefined;
+  };
   let nativeCall: CodemodeRenderState["nativeCall"];
   if (context.expanded && native.renderCall) {
     try {
@@ -91,10 +98,13 @@ export function renderCodemodeCall(
           reportError(error);
         }
       }
-      return (
-        prefix + title + "\n" + highlightCode(source, "javascript").join("\n")
-      );
+      return prefix + title + "\n" + getHighlightedScript(state, source, theme);
     }
+    const preview = getHighlightedScript(
+      state,
+      source.split("\n", 1)[0] ?? "",
+      theme,
+    );
     return safeTruncateToWidth(
       prefix + title + " " + preview,
       callWidth,

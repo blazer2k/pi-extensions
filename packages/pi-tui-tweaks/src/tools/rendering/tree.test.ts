@@ -64,6 +64,26 @@ describe("tree-aware text wrapping", () => {
     expect(widths).toEqual([38, 78, 78]);
   });
 
+  it("invalidates caller-owned caches and the source component, not on width-only reflow", () => {
+    const invalidations: string[] = [];
+    const text = getResultText({}, optsExpanded, undefined);
+    text.onInvalidate = () => {
+      invalidations.push("cache");
+    };
+    text.setText("source", {
+      render: () => ["source"],
+      invalidate() {
+        invalidations.push("component");
+      },
+    });
+    text.render(40);
+    text.render(80);
+    expect(invalidations).toEqual([]);
+    text.invalidate();
+    expect(invalidations).toEqual(["cache", "component"]);
+    expect(text.render(80).join("\n")).toContain("source");
+  });
+
   it("reflows reused results when output padding changes at the same width", () => {
     const state = {};
     const text = getResultText(state, optsExpanded, undefined);
