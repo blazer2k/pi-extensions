@@ -1,4 +1,5 @@
 import type {
+  KeybindingHints,
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -26,6 +27,7 @@ export function formatCodemodeResult(
   theme: Theme,
   width: number,
   durationMs: number | undefined,
+  keyText: KeybindingHints["keyText"],
   nativeLines?: string[],
   cwd = process.cwd(),
 ) {
@@ -140,6 +142,7 @@ export function formatCodemodeResult(
     state,
     options,
     state.resultExpandable === true,
+    keyText,
     "standalone",
   );
   if (hint) metadata.push(hint);

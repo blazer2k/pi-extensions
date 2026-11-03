@@ -2,6 +2,17 @@
 
 The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
+## [Unreleased]
+
+**Changed**
+
+- Updated workspace Pi dependencies to `1.5.0` and explicitly declared the package changelog path.
+
+**Fixed**
+
+- Tool expansion hints use Pi's host-provided keybindings, including when an extension resolves a separate copy of Pi.
+- Strip complete private-prefix ANSI sequences, including SGR mouse reports, without consuming text after bare ESC keypad-mode sequences.
+
 ## 0.2.0 - 2026-10-25
 
 **Breaking changes**

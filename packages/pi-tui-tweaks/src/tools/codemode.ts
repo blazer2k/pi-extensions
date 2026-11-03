@@ -124,6 +124,7 @@ export function createCodemodeRenderers(
             theme,
             width,
             context.durationMs,
+            context.keyText,
             nativeLines,
             context.cwd,
           );

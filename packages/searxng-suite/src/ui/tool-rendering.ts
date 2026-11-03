@@ -1,9 +1,10 @@
 import type {
   AgentToolResult,
+  KeybindingHints,
   ToolRenderResultOptions,
   Theme,
 } from "@earendil-works/pi-coding-agent";
-import { formatSize, keyHint } from "@earendil-works/pi-coding-agent";
+import { formatSize } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import type {
   ToolStatus,
@@ -63,6 +64,7 @@ export function buildToolTextOutput(
   result: AgentToolResult<FetchToolDetails | SearchToolDetails>,
   options: ToolRenderResultOptions,
   theme: Theme,
+  keyHint: KeybindingHints["keyHint"],
   maxCollapsedLines = 20,
   maxCollapsedChars = 1500,
 ): string {
@@ -108,11 +110,12 @@ export function buildToolResultText<
   theme: Theme,
   verbose: boolean,
   summarize: (result: AgentToolResult<T>, theme: Theme) => string,
+  keyHint: KeybindingHints["keyHint"],
 ): string {
   return (
     getToolFailureStatus(result.details, theme) ??
     (verbose
-      ? buildToolTextOutput(result, options, theme)
+      ? buildToolTextOutput(result, options, theme, keyHint)
       : summarize(result, theme))
   );
 }

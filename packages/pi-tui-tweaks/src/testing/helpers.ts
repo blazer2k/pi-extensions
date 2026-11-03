@@ -1,5 +1,7 @@
 import { writeFileSync } from "node:fs";
 import {
+  keyHint,
+  keyText,
   type Theme,
   type ToolDefinition,
   type ToolInfo,
@@ -125,6 +127,8 @@ export function mkToolCtx(overrides: Record<string, unknown> = {}) {
     showImages: false,
     durationMs: undefined as number | undefined,
     outputPad: 1,
+    keyText,
+    keyHint,
     ...overrides,
   };
 }

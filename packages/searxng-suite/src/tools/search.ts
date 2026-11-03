@@ -119,13 +119,14 @@ export function registerSearchTool(pi: ExtensionAPI) {
       );
       return new Text(text, 0, 0);
     },
-    renderResult(result, options, theme) {
+    renderResult(result, options, theme, context) {
       const text = buildToolResultText(
         result,
         options,
         theme,
         config.verbose,
         buildSearchResultsSummary,
+        context.keyHint,
       );
       return new Text(text, 0, 0);
     },

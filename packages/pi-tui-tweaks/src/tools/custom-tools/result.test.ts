@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkTheme, setTestConfig } from "../../testing/helpers";
+import { mkTheme, mkToolCtx, setTestConfig } from "../../testing/helpers";
 import { getConfig } from "../../config/store";
 import { getExpandedOutputLimit } from "../rendering/state";
 import type { BaseRenderState } from "../rendering/types";
@@ -18,6 +18,7 @@ function render(
     { expanded, isPartial: false },
     theme,
     80,
+    mkToolCtx().keyText,
   );
 }
 

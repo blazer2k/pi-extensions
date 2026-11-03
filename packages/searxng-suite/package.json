@@ -49,6 +49,7 @@
     "node": ">=22.19.0"
   },
   "pi": {
+    "changelogPath": "./CHANGELOG.md",
     "extensions": [
       "./src/index.ts"
     ],

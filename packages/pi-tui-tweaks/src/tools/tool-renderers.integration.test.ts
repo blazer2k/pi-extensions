@@ -468,6 +468,7 @@ describe("public renderer integration", () => {
       widgetContainerBelow: new Container(),
       extensionWidgetsAbove: new Map(),
       extensionWidgetsBelow: new Map(),
+      extensionDialogs: [],
       footer: nativeFooter,
       footerDataProvider: footerData,
       options: { tuiMode: "regular" },

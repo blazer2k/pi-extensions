@@ -2,6 +2,7 @@ import {
   Theme,
   highlightCode,
   getLanguageFromPath,
+  type KeybindingHints,
   type ToolRenderers,
   type ToolRenderResultOptions,
   type WriteToolInput,
@@ -150,15 +151,29 @@ function formatWriteResult(
   theme: Theme,
   args: WriteToolInput,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   const textContent = extractTextContent(result);
 
   if (state.isError) {
-    return formatSimpleErrorResult(textContent, state, options, theme, width);
+    return formatSimpleErrorResult(
+      textContent,
+      state,
+      options,
+      theme,
+      width,
+      keyText,
+    );
   }
 
   const lines = countLines(args.content);
-  const hint = buildToolExpansionHint(theme, state, options, lines > 0);
+  const hint = buildToolExpansionHint(
+    theme,
+    state,
+    options,
+    lines > 0,
+    keyText,
+  );
   const summary = `${lines} ${lines === 1 ? "line" : "lines"}`;
   const metadataParts = buildResultStatusParts(state, theme);
   metadataParts.push(theme.fg("muted", summary));
@@ -233,6 +248,7 @@ export function patchWriteTool(): ToolRenderers {
             theme,
             renderArgs,
             width,
+            toolCtx.keyText,
           )
         );
       });
@@ -259,7 +275,15 @@ export function patchWriteTool(): ToolRenderers {
 
       const writeArgs = toolCtx.args as WriteToolInput;
       text.setText((width) =>
-        formatWriteResult(result, state, options, theme, writeArgs, width),
+        formatWriteResult(
+          result,
+          state,
+          options,
+          theme,
+          writeArgs,
+          width,
+          toolCtx.keyText,
+        ),
       );
 
       return text;

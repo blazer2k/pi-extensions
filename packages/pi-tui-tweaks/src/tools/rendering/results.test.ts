@@ -15,7 +15,7 @@ import type {
   ResultStatusState,
 } from "./types";
 import { getConfig } from "../../config/store";
-import { mkTheme, setTestConfig } from "../../testing/helpers";
+import { mkTheme, mkToolCtx, setTestConfig } from "../../testing/helpers";
 
 const opts: ToolRenderResultOptions = { expanded: false, isPartial: false };
 const optsExpanded: ToolRenderResultOptions = {
@@ -60,6 +60,7 @@ describe("formatSimpleErrorResult", () => {
       opts,
       theme,
       80,
+      mkToolCtx().keyText,
     );
     expect(output).toContain("╰─");
     expect(output).toContain("something went wrong");
@@ -76,6 +77,7 @@ describe("formatSimpleErrorResult", () => {
         options,
         theme,
         80,
+        mkToolCtx().keyText,
       );
       expect(output).toContain("Truncated");
       expect(output).not.toContain("error ·");
@@ -87,7 +89,14 @@ describe("formatSimpleErrorResult", () => {
     const state: BaseRenderState = { isError: true };
     const error = "rg: regex parse error:\n    (?:[)\n       ^";
 
-    const collapsed = formatSimpleErrorResult(error, state, opts, theme, 80);
+    const collapsed = formatSimpleErrorResult(
+      error,
+      state,
+      opts,
+      theme,
+      80,
+      mkToolCtx().keyText,
+    );
     expect(collapsed).toContain("╰─ rg: regex parse error: ...");
     expect(collapsed).toContain("to expand");
     expect(collapsed.split("\n")).toHaveLength(1);
@@ -98,6 +107,7 @@ describe("formatSimpleErrorResult", () => {
       optsExpanded,
       theme,
       80,
+      mkToolCtx().keyText,
     );
     expect(expanded).toContain("to collapse");
     expect(expanded).toContain("│      (?:[)");
@@ -112,6 +122,7 @@ describe("formatSimpleErrorResult", () => {
       opts,
       mkTheme(),
       80,
+      mkToolCtx().keyText,
     );
     expect(output).toContain("╰─ error");
     expect(output).not.toContain("ctrl+o");
@@ -157,7 +168,15 @@ describe("formatListResult", () => {
     const result = {
       content: [{ type: "text", text: "(empty)" }],
     };
-    const output = formatListResult(result, state, opts, theme, baseConfig, 80);
+    const output = formatListResult(
+      result,
+      state,
+      opts,
+      theme,
+      baseConfig,
+      80,
+      mkToolCtx().keyText,
+    );
     expect(output).toContain("╰─");
     expect(output).toContain("(empty)");
   });
@@ -173,6 +192,7 @@ describe("formatListResult", () => {
       mkTheme(),
       baseConfig,
       80,
+      mkToolCtx().keyText,
     );
 
     expect(output).toContain("Truncated · (empty)");
@@ -184,7 +204,15 @@ describe("formatListResult", () => {
     const result = {
       content: [{ type: "text", text: "a.txt\nb.txt\nc.txt" }],
     };
-    const output = formatListResult(result, state, opts, theme, baseConfig, 80);
+    const output = formatListResult(
+      result,
+      state,
+      opts,
+      theme,
+      baseConfig,
+      80,
+      mkToolCtx().keyText,
+    );
     expect(output).toContain("3 files");
     expect(output).toContain("to expand");
   });
@@ -200,6 +228,7 @@ describe("formatListResult", () => {
       mkTheme(),
       baseConfig,
       80,
+      mkToolCtx().keyText,
     );
     const rendered = output.split("\n");
 
@@ -230,6 +259,7 @@ describe("formatListResult", () => {
         mkTheme(),
         baseConfig,
         80,
+        mkToolCtx().keyText,
       );
       const rows = output.split("\n");
       expect(
@@ -255,6 +285,7 @@ describe("formatListResult", () => {
       mkTheme(),
       baseConfig,
       80,
+      mkToolCtx().keyText,
     ).split("\n");
 
     expect(output.slice(0, -1)).toEqual(items.map((item) => `│  ${item}`));
@@ -271,7 +302,15 @@ describe("formatListResult", () => {
       content: [{ type: "text", text: "a.txt\nb.txt" }],
       details: { resultLimitReached: 1000 },
     };
-    const output = formatListResult(result, state, opts, theme, baseConfig, 80);
+    const output = formatListResult(
+      result,
+      state,
+      opts,
+      theme,
+      baseConfig,
+      80,
+      mkToolCtx().keyText,
+    );
     expect(output).toContain("muted:2 files");
     expect(output).not.toContain("1000 limit");
   });
@@ -283,7 +322,15 @@ describe("formatListResult", () => {
       content: [{ type: "text", text: "a.txt\nb.txt" }],
       details: { resultLimitReached: 1000 },
     };
-    const output = formatListResult(result, state, opts, theme, baseConfig, 80);
+    const output = formatListResult(
+      result,
+      state,
+      opts,
+      theme,
+      baseConfig,
+      80,
+      mkToolCtx().keyText,
+    );
     expect(output).toContain("Truncated · 2 files");
     expect(output).not.toContain("1000 limit");
   });
@@ -302,6 +349,7 @@ describe("formatListResult", () => {
         theme,
         baseConfig,
         80,
+        mkToolCtx().keyText,
       ),
     ).toContain("dim:╰─ ");
 
@@ -313,6 +361,7 @@ describe("formatListResult", () => {
         theme,
         baseConfig,
         80,
+        mkToolCtx().keyText,
       ),
     ).toContain("dim:╰─ ");
   });

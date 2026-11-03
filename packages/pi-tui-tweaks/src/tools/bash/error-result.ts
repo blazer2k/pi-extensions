@@ -1,4 +1,4 @@
-import type { Theme } from "@earendil-works/pi-coding-agent";
+import type { KeybindingHints, Theme } from "@earendil-works/pi-coding-agent";
 import { buildToolExpansionHint } from "../rendering/state";
 import { buildBashMetadataParts, joinMetadata } from "./metadata";
 import type { BashUnknownErrorView } from "./model";
@@ -11,6 +11,7 @@ export function renderUnknownError(
   theme: Theme,
   state: BashRenderState,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   const expandable =
     view.callExpandable || view.body.collapsedTruncated || view.toolTruncated;
@@ -29,6 +30,7 @@ export function renderUnknownError(
     state,
     { expanded },
     expandable,
+    keyText,
     metadata ? "suffix" : "standalone",
   );
   const footer = metadata + hint;

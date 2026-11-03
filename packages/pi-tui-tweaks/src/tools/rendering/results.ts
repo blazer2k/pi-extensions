@@ -1,5 +1,6 @@
 import type {
   ExtensionAPI,
+  KeybindingHints,
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -74,6 +75,7 @@ export function formatSimpleErrorResult(
   options: ToolRenderResultOptions,
   theme: Theme,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   const status = state.truncated
     ? buildResultStatusParts(state, theme).join(theme.fg("muted", " · "))
@@ -93,7 +95,9 @@ export function formatSimpleErrorResult(
   const bodyWidth = Math.max(
     1,
     errorWidth -
-      (isExpandable ? visibleWidth(buildExpansionHint(theme, "expand")) : 0),
+      (isExpandable
+        ? visibleWidth(buildExpansionHint(theme, "expand", keyText))
+        : 0),
   );
   const errorBody =
     !options.expanded && bodyWidth === errorWidth
@@ -109,7 +113,12 @@ export function formatSimpleErrorResult(
 
   if (options.expanded) {
     const collapseHint = isExpandable
-      ? buildExpansionHint(theme, "collapse", status ? "suffix" : "standalone")
+      ? buildExpansionHint(
+          theme,
+          "collapse",
+          keyText,
+          status ? "suffix" : "standalone",
+        )
       : "";
     const footer = status + collapseHint;
     const formatted = bodyText
@@ -132,7 +141,9 @@ export function formatSimpleErrorResult(
       : formatted;
   }
 
-  const suffix = isExpandable ? buildExpansionHint(theme, "expand") : "";
+  const suffix = isExpandable
+    ? buildExpansionHint(theme, "expand", keyText)
+    : "";
   if (!state.truncated) {
     return (
       theme.fg("dim", getTreeEndPrefix()) + theme.fg("error", bodyText) + suffix
@@ -156,6 +167,7 @@ export function formatListResult(
   theme: Theme,
   config: ListResultConfig,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   if (state.isError) {
     return formatSimpleErrorResult(
@@ -164,6 +176,7 @@ export function formatListResult(
       options,
       theme,
       width,
+      keyText,
     );
   }
 
@@ -174,7 +187,7 @@ export function formatListResult(
     return (
       theme.fg("dim", getTreeEndPrefix()) +
       emptyParts.join(theme.fg("muted", " · ")) +
-      buildToolExpansionHint(theme, state, options, false)
+      buildToolExpansionHint(theme, state, options, false, keyText)
     );
   }
 
@@ -189,7 +202,7 @@ export function formatListResult(
     return (
       theme.fg("dim", getTreeEndPrefix()) +
       summary +
-      buildToolExpansionHint(theme, state, options, true)
+      buildToolExpansionHint(theme, state, options, true, keyText)
     );
   }
 
@@ -226,7 +239,7 @@ export function formatListResult(
   lines.push(
     theme.fg("dim", getTreeEndPrefix()) +
       summary +
-      buildToolExpansionHint(theme, state, options, true),
+      buildToolExpansionHint(theme, state, options, true, keyText),
   );
 
   return lines.join("\n");
@@ -257,7 +270,14 @@ export function buildRenderResult(
 
     invalidateIfChanged(changed, toolContext.invalidate);
     text.setText((width) =>
-      formatResult(result, state as ResultStatusState, options, theme, width),
+      formatResult(
+        result,
+        state as ResultStatusState,
+        options,
+        theme,
+        width,
+        toolContext.keyText,
+      ),
     );
     return text;
   };

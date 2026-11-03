@@ -38,6 +38,7 @@
     "typebox": "*"
   },
   "pi": {
+    "changelogPath": "./CHANGELOG.md",
     "extensions": [
       "./index.ts"
     ],

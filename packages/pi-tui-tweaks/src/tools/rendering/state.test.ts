@@ -12,7 +12,7 @@ import {
 import { formatTreeLine, getCallRenderParts } from "./tree";
 import type { BaseRenderState } from "./types";
 import { getConfig } from "../../config/store";
-import { mkTheme, setTestConfig } from "../../testing/helpers";
+import { mkTheme, mkToolCtx, setTestConfig } from "../../testing/helpers";
 
 describe("updateResultState", () => {
   it("returns true only when state changes", () => {
@@ -64,14 +64,14 @@ describe("result status rendering", () => {
 
 describe("buildExpansionHint", () => {
   it("returns a middle-dot-prefixed expand hint without parens", () => {
-    const hint = buildExpansionHint(mkTheme(), "expand");
+    const hint = buildExpansionHint(mkTheme(), "expand", mkToolCtx().keyText);
     expect(hint).toStartWith(" · ");
     expect(hint).toContain("to expand");
     expect(hint).not.toContain("(");
   });
 
   it("returns a middle-dot-prefixed collapse hint without parens", () => {
-    const hint = buildExpansionHint(mkTheme(), "collapse");
+    const hint = buildExpansionHint(mkTheme(), "collapse", mkToolCtx().keyText);
     expect(hint).toStartWith(" · ");
     expect(hint).toContain("to collapse");
     expect(hint).not.toContain("(");
@@ -83,6 +83,7 @@ describe("buildExpansionHint", () => {
       { callExpandable: true },
       { expanded: false },
       false,
+      mkToolCtx().keyText,
     );
     expect(hint).toContain("to expand");
   });
@@ -96,8 +97,10 @@ describe("buildExpansionHint", () => {
     });
     try {
       const theme = mkTheme();
-      expect(buildExpansionHint(theme, "expand")).toBe("");
-      expect(buildExpansionHint(theme, "collapse")).toBe("");
+      expect(buildExpansionHint(theme, "expand", mkToolCtx().keyText)).toBe("");
+      expect(buildExpansionHint(theme, "collapse", mkToolCtx().keyText)).toBe(
+        "",
+      );
     } finally {
       setTestConfig({
         tools: {

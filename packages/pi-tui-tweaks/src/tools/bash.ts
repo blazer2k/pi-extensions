@@ -61,7 +61,14 @@ export function patchBashTool(): ToolRenderers {
       invalidateIfChanged(changed, toolContext.invalidate);
       text.setText((width) => {
         const previousResultExpandable = state.resultExpandable === true;
-        const output = formatBashResult(result, state, options, theme, width);
+        const output = formatBashResult(
+          result,
+          state,
+          options,
+          theme,
+          width,
+          toolContext.keyText,
+        );
         invalidateIfChanged(
           previousResultExpandable !== (state.resultExpandable === true),
           toolContext.invalidate,

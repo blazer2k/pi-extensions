@@ -82,13 +82,14 @@ export function registerFetchTool(pi: ExtensionAPI) {
       const text = buildToolCallText("web fetch", args.url, theme);
       return new Text(text, 0, 0);
     },
-    renderResult(result, options, theme) {
+    renderResult(result, options, theme, context) {
       const text = buildToolResultText(
         result,
         options,
         theme,
         config.verbose,
         buildFetchContentSummary,
+        context.keyHint,
       );
       return new Text(text, 0, 0);
     },

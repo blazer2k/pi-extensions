@@ -1,4 +1,5 @@
 import type {
+  KeybindingHints,
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -51,16 +52,30 @@ export function formatReadResult(
   options: ToolRenderResultOptions,
   theme: Theme,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   const hasImage = result.content.some((content) => content.type === "image");
   const textContent = extractTextContent(result);
 
   if (state.isError) {
-    return formatSimpleErrorResult(textContent, state, options, theme, width);
+    return formatSimpleErrorResult(
+      textContent,
+      state,
+      options,
+      theme,
+      width,
+      keyText,
+    );
   }
 
   const metadataParts = buildResultStatusParts(state, theme);
-  const callHint = buildToolExpansionHint(theme, state, options, false);
+  const callHint = buildToolExpansionHint(
+    theme,
+    state,
+    options,
+    false,
+    keyText,
+  );
   const imageMarker = getImageReadMarker(textContent);
 
   if (hasImage) {

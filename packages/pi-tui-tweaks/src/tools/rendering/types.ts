@@ -1,4 +1,5 @@
 import type {
+  KeybindingHints,
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -35,6 +36,7 @@ export type FormatResultFn = (
   options: ToolRenderResultOptions,
   theme: Theme,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ) => string;
 
 export type BlinkIndicator = {

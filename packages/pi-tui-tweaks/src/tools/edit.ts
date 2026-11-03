@@ -1,6 +1,7 @@
 import {
   renderDiff,
   Theme,
+  type KeybindingHints,
   type EditToolDetails,
   type EditToolInput,
   type ToolRenderers,
@@ -47,6 +48,7 @@ function formatEditResult(
   options: ToolRenderResultOptions,
   theme: Theme,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   if (state.isError) {
     return formatSimpleErrorResult(
@@ -55,6 +57,7 @@ function formatEditResult(
       options,
       theme,
       width,
+      keyText,
     );
   }
 
@@ -65,7 +68,7 @@ function formatEditResult(
     return (
       theme.fg("dim", getTreeEndPrefix()) +
       metadataParts.join(theme.fg("muted", " · ")) +
-      buildToolExpansionHint(theme, state, options, false)
+      buildToolExpansionHint(theme, state, options, false, keyText)
     );
   }
 
@@ -86,6 +89,7 @@ function formatEditResult(
     state,
     options,
     true,
+    keyText,
     metadata ? "suffix" : "standalone",
   );
 

@@ -169,7 +169,14 @@ function createResultRenderer(
 
     if (!originalRenderResult) {
       text.setText((width) =>
-        buildGenericResult(result, state, options, theme, width),
+        buildGenericResult(
+          result,
+          state,
+          options,
+          theme,
+          width,
+          toolContext.keyText,
+        ),
       );
       return text;
     }
@@ -187,7 +194,14 @@ function createResultRenderer(
         error,
       });
       text.setText((width) =>
-        buildGenericResult(result, state, options, theme, width),
+        buildGenericResult(
+          result,
+          state,
+          options,
+          theme,
+          width,
+          toolContext.keyText,
+        ),
       );
       return text;
     }
@@ -206,6 +220,7 @@ function createResultRenderer(
             options,
             theme,
             width,
+            toolContext.keyText,
           );
         }
 
@@ -227,7 +242,14 @@ function createResultRenderer(
           toolName,
           error,
         });
-        return buildGenericResult(result, state, options, theme, width);
+        return buildGenericResult(
+          result,
+          state,
+          options,
+          theme,
+          width,
+          toolContext.keyText,
+        );
       }
     }, component);
     return text;

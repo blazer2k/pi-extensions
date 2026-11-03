@@ -58,8 +58,17 @@ export function patchLsTool(): ToolRenderers {
       });
       return text;
     },
-    renderResult: buildRenderResult((result, state, options, theme, width) =>
-      formatListResult(result, state, options, theme, LS_CONFIG, width),
+    renderResult: buildRenderResult(
+      (result, state, options, theme, width, keyText) =>
+        formatListResult(
+          result,
+          state,
+          options,
+          theme,
+          LS_CONFIG,
+          width,
+          keyText,
+        ),
     ),
   };
 }

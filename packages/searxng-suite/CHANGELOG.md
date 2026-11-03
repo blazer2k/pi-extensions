@@ -4,11 +4,13 @@
 
 ### Changed
 
+- Updated workspace Pi dependencies to `1.5.0` and explicitly declared the package changelog path.
 - Renamed `web_extract` to `web_fetch`, without an old-name alias. Both tool labels and rendered headings are lowercase: `web search` and `web fetch`; optional capitalization is controlled by TUI Tweaks.
 - Simplified private API/tool module names and merged HTML-only content cleaning into the HTML extractor without changing extraction behavior.
 
 ### Fixed
 
+- Verbose search and fetch expansion hints use Pi's host-provided keybindings instead of an extension-local Pi copy.
 - Guard against `null`/`undefined` `query` in `buildToolCallText` — prevents rendering the literal string `"undefined"` in tool call text
 
 ## [0.2.2] – 2026-05-17

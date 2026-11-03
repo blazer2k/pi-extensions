@@ -61,6 +61,23 @@ describe("extractTextContent", () => {
 });
 
 describe("display sanitizers", () => {
+  it("strips private CSI prefixes without consuming text after bare ESC modes", () => {
+    for (const sequence of [
+      "\x1b[<35;59;1M",
+      "\x1b[>4;2m",
+      "\x1b[=1h",
+      "\x9b<35;59;1M",
+    ]) {
+      expect(sanitizeDisplayText(`before${sequence}after`)).toBe("beforeafter");
+      expect(
+        extractTextContent({
+          content: [{ type: "text", text: sequence + "kept\n" }],
+        }),
+      ).toBe("kept\n");
+    }
+    expect(sanitizeDisplayText("\x1b=123\x1b>456")).toBe("123456");
+  });
+
   it("strips ANSI/OSC sequences and flattens whitespace", () => {
     expect(sanitizeDisplayText("a\x1b[31mred\x1b[0m\n\ttext")).toBe(
       "ared text",

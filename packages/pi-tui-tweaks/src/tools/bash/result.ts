@@ -1,4 +1,5 @@
 import type {
+  KeybindingHints,
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -20,6 +21,7 @@ export function formatBashResult(
   options: ToolRenderResultOptions,
   theme: Theme,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   const view = buildBashResultView(result, state, options, {
     collapsedDisplay: getCollapsedOutputDisplay(),
@@ -28,7 +30,7 @@ export function formatBashResult(
   });
 
   if (view.kind === "unknown-error") {
-    return renderUnknownError(view, theme, state, width);
+    return renderUnknownError(view, theme, state, width, keyText);
   }
 
   const collapsedOutput = formatCollapsedOutput(
@@ -69,6 +71,7 @@ export function formatBashResult(
     state,
     { expanded },
     expandable,
+    keyText,
     metadata ? "suffix" : "standalone",
   );
   if (view.kind === "success" && !metadata && !hint) {

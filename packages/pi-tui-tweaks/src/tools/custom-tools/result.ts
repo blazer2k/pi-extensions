@@ -1,4 +1,5 @@
 import type {
+  KeybindingHints,
   Theme,
   ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
@@ -17,6 +18,7 @@ export function buildGenericResult(
   options: ToolRenderResultOptions,
   theme: Theme,
   width: number,
+  keyText: KeybindingHints["keyText"],
 ): string {
   if (state.isError) {
     return formatSimpleErrorResult(
@@ -25,6 +27,7 @@ export function buildGenericResult(
       options,
       theme,
       width,
+      keyText,
     );
   }
 

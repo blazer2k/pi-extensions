@@ -64,8 +64,16 @@ export function patchGrepTool(): ToolRenderers {
       return text;
     },
     renderResult: buildRenderResult(
-      (result, state, options, theme, width) =>
-        formatListResult(result, state, options, theme, GREP_CONFIG, width),
+      (result, state, options, theme, width, keyText) =>
+        formatListResult(
+          result,
+          state,
+          options,
+          theme,
+          GREP_CONFIG,
+          width,
+          keyText,
+        ),
       (details) => {
         const d = details as GrepToolDetails | undefined;
         return d?.truncation?.truncated === true || d?.linesTruncated === true;

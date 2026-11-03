@@ -1,4 +1,4 @@
-import { keyText, type Theme } from "@earendil-works/pi-coding-agent";
+import type { KeybindingHints, Theme } from "@earendil-works/pi-coding-agent";
 import type { Config } from "../../config/definition";
 import { getConfig } from "../../config/store";
 import { formatMetadataLabel } from "./labels";
@@ -122,6 +122,7 @@ export function clearBlinkTimers(): void {
 export function buildExpansionHint(
   theme: Theme,
   action: "expand" | "collapse",
+  keyText: KeybindingHints["keyText"],
   placement: "suffix" | "standalone" = "suffix",
 ): string {
   if (!getConfig().tools.showExpansionHint) return "";
@@ -140,12 +141,14 @@ export function buildToolExpansionHint(
   state: BaseRenderState,
   options: { expanded: boolean },
   resultExpandable: boolean,
+  keyText: KeybindingHints["keyText"],
   placement: "suffix" | "standalone" = "suffix",
 ): string {
   if (!state.callExpandable && !resultExpandable) return "";
   return buildExpansionHint(
     theme,
     options.expanded ? "collapse" : "expand",
+    keyText,
     placement,
   );
 }
