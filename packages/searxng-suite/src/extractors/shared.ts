@@ -12,6 +12,8 @@ export interface ExtractResponse {
   contentType: string;
   byteLength?: number;
   originalPdfPath?: string;
+  // UTF-16 offset after generated metadata in joined text blocks.
+  bodyStart?: number;
   failure?: { cause: unknown };
   stopReason?: string;
   pdfPages?: { total?: number; processed: number; accepted: number };

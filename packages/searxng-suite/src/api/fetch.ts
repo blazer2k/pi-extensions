@@ -174,7 +174,11 @@ export async function webFetch(
       result.finalUrl = finalUrl;
       if (kind !== "json" && kind !== "pdf") {
         const text = result.content.find((item) => item.type === "text");
-        if (text) text.text = `Final URL: ${finalUrl}\n${text.text}`;
+        if (text) {
+          const prefix = `Final URL: ${finalUrl}\n`;
+          text.text = prefix + text.text;
+          result.bodyStart = prefix.length + (result.bodyStart ?? 0);
+        }
       }
     }
     return kind === "pdf" ? result : limitExtractContent(result, maxBytes);

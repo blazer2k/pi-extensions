@@ -24,6 +24,7 @@ export async function extractPlainText(
   return {
     sourceUrl,
     contentType,
+    bodyStart: content.length - raw.length,
     content: [{ type: "text", text: content }],
   };
 }

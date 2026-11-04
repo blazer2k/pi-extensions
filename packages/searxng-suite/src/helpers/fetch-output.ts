@@ -38,7 +38,12 @@ function fileNotices(
     .join("\n");
 }
 
-function previewText(text: string, notice: string, sourceInfo = ""): string {
+function previewText(
+  text: string,
+  notice: string,
+  sourceInfo = "",
+  bodyStart = 0,
+) {
   const emptyPreview =
     "No text preview: the first line exceeds the remaining inline byte limit.";
   const metadataNotice = "Source metadata shortened to fit the inline limit.";
@@ -60,12 +65,18 @@ function previewText(text: string, notice: string, sourceInfo = ""): string {
     maxBytes: DEFAULT_MAX_BYTES - Buffer.byteLength(`${header}\n\n`, "utf8"),
     maxLines: DEFAULT_MAX_LINES - truncateHead(header).totalLines - 1,
   });
-  return [
+  const output = [
     header,
     preview.firstLineExceedsLimit ? emptyPreview : preview.content,
   ]
     .filter(Boolean)
     .join("\n\n");
+  const start = preview.firstLineExceedsLimit
+    ? output.length
+    : output.length -
+      preview.content.length +
+      Math.min(bodyStart, preview.content.length);
+  return { output, bodyStart: start };
 }
 
 async function saveOutput(
@@ -92,10 +103,11 @@ async function saveOutput(
         ? filename.replace("content.", "content.partial.")
         : filename,
     );
-    const output = previewText(
+    const preview = previewText(
       body,
       `${fileNotices({ ...result, fullOutputPath, incomplete: Boolean(result.failure) })}\nRead or search the file with available tools.`,
       sourceInfo,
+      result.bodyStart,
     );
     await writeExtractionFile(
       fullOutputPath,
@@ -103,7 +115,7 @@ async function saveOutput(
       maxSessionStorageBytes,
       signal,
     );
-    return { fullOutputPath, output };
+    return { fullOutputPath, ...preview };
   } catch (error) {
     if (directory) {
       try {
@@ -127,6 +139,7 @@ function outputFailure(
   signal?: AbortSignal,
   content: ExtractResponse["content"] = [],
   sourceInfo = "",
+  bodyStart = 0,
 ): AgentToolResult<FetchToolDetails> {
   const failure = buildToolFailure("Fetch", details, cause, signal);
   const paths = fileNotices(details);
@@ -146,15 +159,19 @@ function outputFailure(
       : details.originalPdfPath && !details.fullOutputPath
         ? "\nNo extracted PDF text is available in this response."
         : "";
+  const preview = previewText(
+    body,
+    notice + previewNotice,
+    diagnostic,
+    bodyStart,
+  );
   return {
     ...failure,
     content: [
-      {
-        type: "text",
-        text: previewText(body, notice + previewNotice, diagnostic),
-      },
+      { type: "text", text: preview.output },
       ...content.filter((item) => item.type === "image"),
     ],
+    details: { ...failure.details, bodyStart: preview.bodyStart },
   };
 }
 
@@ -192,7 +209,14 @@ async function incompleteOutput(
       }
     }
   }
-  return outputFailure(details, cause, signal, result.content, sourceInfo);
+  return outputFailure(
+    details,
+    cause,
+    signal,
+    result.content,
+    sourceInfo,
+    result.bodyStart,
+  );
 }
 
 export async function buildFetchOutput(
@@ -242,7 +266,22 @@ export async function buildFetchOutput(
     : result.content;
   const full = truncateHead(getText(content));
   if (!full.truncated) {
-    return { content, details: { ...details, status: "success" } };
+    const text = getText(content);
+    const body = getText(result.content);
+    const start =
+      text.length -
+      body.length +
+      (kind === "image"
+        ? body.length
+        : Math.min(result.bodyStart ?? 0, body.length));
+    return {
+      content,
+      details: {
+        ...details,
+        status: "success",
+        bodyStart: start,
+      },
+    };
   }
   const truncation = {
     truncated: full.truncated,
@@ -251,7 +290,7 @@ export async function buildFetchOutput(
     totalBytes: full.totalBytes,
   };
   const body = getText(result.content);
-  let savedOutput: { fullOutputPath: string; output: string };
+  let savedOutput: Awaited<ReturnType<typeof saveOutput>>;
   try {
     savedOutput = await saveOutput(
       body,
@@ -272,9 +311,10 @@ export async function buildFetchOutput(
       signal,
       result.content,
       sourceInfo,
+      result.bodyStart,
     );
   }
-  const { fullOutputPath, output } = savedOutput;
+  const { fullOutputPath, output, bodyStart } = savedOutput;
   const completedDetails = { ...details, fullOutputPath, truncation };
   const images = result.content.filter((item) => item.type === "image");
   if (signal?.aborted) {
@@ -288,6 +328,6 @@ export async function buildFetchOutput(
   }
   return {
     content: [{ type: "text", text: output }, ...images],
-    details: { ...completedDetails, status: "success" },
+    details: { ...completedDetails, status: "success", bodyStart },
   };
 }

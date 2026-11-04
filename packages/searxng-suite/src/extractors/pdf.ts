@@ -183,6 +183,8 @@ async function convertPdf(
         ),
       };
     } else {
+      result.bodyStart =
+        header.length + (!result.failure && !readable ? body.length : 0);
       result.content = [{ type: "text", text: header + body }];
     }
   }

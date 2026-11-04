@@ -77,6 +77,7 @@ export async function extractHtml(
   return {
     sourceUrl,
     contentType,
+    bodyStart: content.length - markdown.length,
     content: [{ type: "text", text: content }],
   };
 }

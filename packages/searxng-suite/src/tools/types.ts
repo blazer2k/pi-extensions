@@ -21,6 +21,8 @@ export interface FetchToolDetails {
   originalPdfPath?: string;
   incomplete?: boolean;
   stopReason?: string;
+  // UTF-16 offset after metadata in joined text blocks.
+  bodyStart?: number;
   pdfPages?: ExtractResponse["pdfPages"];
   // Counts describe the complete tool text, including source metadata.
   truncation?: Pick<

@@ -34,7 +34,10 @@ const ConfigSchema = Type.Object(
     ),
     agentCanPickCategory: flag(false),
     allowPrivateUrls: flag(false),
-    verbose: flag(false),
+    fetchPreviewLines: Type.Union(
+      [Type.Literal(-1), Type.Integer({ minimum: 1 })],
+      { default: 20 },
+    ),
   },
   { additionalProperties: false },
 );

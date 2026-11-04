@@ -15,11 +15,7 @@ import { createExtractionDirectory } from "../helpers/extract-files";
 import { Text } from "@earendil-works/pi-tui";
 import { buildToolFailure } from "../helpers/error";
 import type { FetchToolDetails } from "./types";
-import {
-  buildToolCallText,
-  buildToolResultText,
-  buildFetchContentSummary,
-} from "../ui/tool-rendering";
+import { buildToolCallText, renderFetchResult } from "../ui/tool-rendering";
 
 export function registerFetchTool(pi: ExtensionAPI) {
   const config = getConfig();
@@ -83,15 +79,13 @@ export function registerFetchTool(pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
     renderResult(result, options, theme, context) {
-      const text = buildToolResultText(
+      return renderFetchResult(
         result,
         options,
         theme,
-        config.verbose,
-        buildFetchContentSummary,
+        config.fetchPreviewLines,
         context.keyHint,
       );
-      return new Text(text, 0, 0);
     },
   });
 }

@@ -12,11 +12,7 @@ import {
 } from "../api/search";
 import { buildToolFailure } from "../helpers/error";
 import type { SearchToolDetails } from "./types";
-import {
-  buildToolCallText,
-  buildToolResultText,
-  buildSearchResultsSummary,
-} from "../ui/tool-rendering";
+import { buildToolCallText, renderSearchResult } from "../ui/tool-rendering";
 
 export function registerSearchTool(pi: ExtensionAPI) {
   const config = getConfig();
@@ -120,15 +116,7 @@ export function registerSearchTool(pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
     renderResult(result, options, theme, context) {
-      const text = buildToolResultText(
-        result,
-        options,
-        theme,
-        config.verbose,
-        buildSearchResultsSummary,
-        context.keyHint,
-      );
-      return new Text(text, 0, 0);
+      return renderSearchResult(result, options, theme, context.keyHint);
     },
   });
 }

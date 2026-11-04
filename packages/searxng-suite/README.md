@@ -27,6 +27,18 @@ JSON uses the shared `maxContentBytes` download limit, including any BOM. Charse
 
 ![Example: searching and extracting university admission info](images/example.webp)
 
+## Tool display
+
+Both tools use Pi's normal expansion shortcut (`Ctrl+O` by default, or your configured binding). Dim `to expand` / `to collapse` hints show the active binding when details are available, including on failed fetches. Collapsed search shows only the result count alongside its hint; expanded search shows all returned entries and diagnostics. The fetch preview setting does not limit search. Hints are UI metadata outside the fetch content-line budget.
+
+Collapsed fetch shows a compact summary or failure status. Expanded fetch shows relevant metadata and a text preview. `fetchPreviewLines` defaults to 20 and limits only document content lines: half from the beginning, half from the end, with an exact `+N lines` marker for the omitted middle. Odd limits give the extra line to the beginning; 1 shows the first line only. Metadata, errors, saved-file references and the omission marker are outside that budget. Document-internal headings and blank lines count as content.
+
+With a positive limit, long preview lines are clipped to the available width with `...`; resizing recalculates the preview. Set `fetchPreviewLines` to `-1` to show all available text with normal wrapping. Metadata can still wrap, and image display is unchanged, so this is not a limit on the entire tool block's terminal height.
+
+The preview uses only text already returned by the tool. For saved documents, its bottom is the end of the returned preview, not necessarily the end of the document. Display limits do not shorten the model's result, stop extraction, read saved files or create extra files. Small inline results may have hidden text without a saved-file path; increase the setting or use `-1` to display more available text.
+
+The `verbose` setting has been removed. Expansion controls the display instead; normal settings repair removes the obsolete key without changing valid sibling preferences.
+
 ## Extracted output files
 
 Text fitting Pi's inline limits is returned in full: at most 2,000 lines and 50 KB (51,200 UTF-8 bytes), including source info. Small outputs do not create saved text files; PDFs always keep their original file. Images remain native attachments.
@@ -97,22 +109,22 @@ Edit `pi-searxng.json` inside Pi's agent directory, usually `~/.pi/agent/pi-sear
   "safesearch": 0,
   "agentCanPickCategory": false,
   "allowPrivateUrls": false,
-  "verbose": false
+  "fetchPreviewLines": 20
 }
 ```
 
-| Setting                  | Default      | Meaning                                                                                                                                                     |
-| ------------------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `maxResults`             | `10`         | Maximum results to return. Any integer >= 1, without a hard-coded upper bound.                                                                              |
-| `agentCanLimitResults`   | `false`      | Let the agent request fewer results through the optional `maxResults` tool argument, from 1 up to the configured maximum.                                   |
-| `timeoutMs`              | `180000`     | Shared search/extraction network timeout, including response bodies; 1000-2147483647 ms. Existing valid numeric values, including fractions, are preserved. |
-| `pdfProcessingTimeoutMs` | `300000`     | PDF loading/conversion deadline; integer 1-2147483647 ms.                                                                                                   |
-| `maxContentBytes`        | `104857600`  | Shared download/converted-text ceiling: 100 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                         |
-| `maxSessionStorageBytes` | `1073741824` | Session file-content allowance: 1,024 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                               |
-| `safesearch`             | `0`          | SafeSearch: 0 (off), 1 (moderate), or 2 (strict).                                                                                                           |
-| `agentCanPickCategory`   | `false`      | Let the agent choose one of the supported search categories.                                                                                                |
-| `allowPrivateUrls`       | `false`      | Permit local/private destinations for `web_fetch`.                                                                                                          |
-| `verbose`                | `false`      | Show result text instead of the compact summary.                                                                                                            |
+| Setting                  | Default      | Meaning                                                                                                                                                          |
+| ------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxResults`             | `10`         | Maximum results to return. Any integer >= 1, without a hard-coded upper bound.                                                                                   |
+| `agentCanLimitResults`   | `false`      | Let the agent request fewer results through the optional `maxResults` tool argument, from 1 up to the configured maximum.                                        |
+| `timeoutMs`              | `180000`     | Shared search/extraction network timeout, including response bodies; 1000-2147483647 ms. Existing valid numeric values, including fractions, are preserved.      |
+| `pdfProcessingTimeoutMs` | `300000`     | PDF loading/conversion deadline; integer 1-2147483647 ms.                                                                                                        |
+| `maxContentBytes`        | `104857600`  | Shared download/converted-text ceiling: 100 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                              |
+| `maxSessionStorageBytes` | `1073741824` | Session file-content allowance: 1,024 MB by default; integer 1-Number.MAX_SAFE_INTEGER bytes.                                                                    |
+| `safesearch`             | `0`          | SafeSearch: 0 (off), 1 (moderate), or 2 (strict).                                                                                                                |
+| `agentCanPickCategory`   | `false`      | Let the agent choose one of the supported search categories.                                                                                                     |
+| `allowPrivateUrls`       | `false`      | Permit local/private destinations for `web_fetch`.                                                                                                               |
+| `fetchPreviewLines`      | `20`         | Expanded fetch content lines, split between beginning/end. Positive integer or `-1` for all available text. Metadata is outside the limit; search is unaffected. |
 
 All settings take effect at startup or `/reload`, including the tool schemas. Increasing `maxResults` only retains more results from one SearXNG response; it does not add pagination.
 
