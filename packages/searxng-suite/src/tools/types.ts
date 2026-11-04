@@ -21,6 +21,9 @@ export interface FetchToolDetails {
   originalPdfPath?: string;
   incomplete?: boolean;
   stopReason?: string;
+  // Complete accepted document text, excluding generated metadata; bytes are UTF-8.
+  textLines?: number;
+  textBytes?: number;
   // UTF-16 offset after metadata in joined text blocks.
   bodyStart?: number;
   pdfPages?: ExtractResponse["pdfPages"];

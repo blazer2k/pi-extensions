@@ -5,6 +5,7 @@ import type {
   Theme,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
+import { truncateHead } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { getConfig, loadConfig } from "../src/config/store";
 import { registerFetchTool } from "../src/tools/fetch";
@@ -57,6 +58,8 @@ function result(
       url: "https://example.test",
       status: "success",
       bodyStart: metadata.length,
+      textLines: truncateHead(body).totalLines,
+      textBytes: Buffer.byteLength(body, "utf8"),
     },
   };
 }
@@ -158,7 +161,7 @@ describe("native expansion and fetch previews", () => {
     keyHint.mockClear();
     const value = result(lines(8));
     const collapsed = text(component(value, 2, false));
-    expect(collapsed).toMatch(/^\d+ chars \(~\d+ tokens\)/);
+    expect(collapsed).toStartWith("8 lines, 55B text");
     expect(collapsed).toEndWith("alt+shift+e to expand");
     expect(keyHint).toHaveBeenCalledWith("app.tools.expand", "to expand");
     keyHint.mockClear();

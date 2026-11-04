@@ -9,6 +9,7 @@
 - Simplified private API/tool module names and merged HTML-only content cleaning into the HTML extractor without changing extraction behavior.
 - Removed `verbose`. Pi's native expansion state now switches between compact summaries and detailed results; expanded search keeps all returned entries and diagnostics.
 - Added fetch-only `fetchPreviewLines` (default 20): expanded fetch shows beginning/end content lines with an omission count, keeping metadata and file references outside the limit. Positive limits clip long preview lines to terminal width; `-1` shows all available text with wrapping. Model output and saved files are unchanged.
+- Replaced character/estimated-token fetch summaries with measured accepted-text line counts and UTF-8 sizes, excluding generated metadata. PDF summaries use known page counts and text sizes or report no readable text. Previewing does not change the totals; unknown historical measurements are omitted without reading files.
 
 ### Fixed
 

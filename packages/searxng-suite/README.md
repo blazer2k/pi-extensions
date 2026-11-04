@@ -31,7 +31,13 @@ JSON uses the shared `maxContentBytes` download limit, including any BOM. Charse
 
 Both tools use Pi's normal expansion shortcut (`Ctrl+O` by default, or your configured binding). Dim `to expand` / `to collapse` hints show the active binding when details are available, including on failed fetches. Collapsed search shows only the result count alongside its hint; expanded search shows all returned entries and diagnostics. The fetch preview setting does not limit search. Hints are UI metadata outside the fetch content-line budget.
 
-Collapsed fetch shows a compact summary or failure status. Expanded fetch shows relevant metadata and a text preview. `fetchPreviewLines` defaults to 20 and limits only document content lines: half from the beginning, half from the end, with an exact `+N lines` marker for the omitted middle. Odd limits give the extra line to the beginning; 1 shows the first line only. Metadata, errors, saved-file references and the omission marker are outside that budget. Document-internal headings and blank lines count as content.
+Fetch text summaries show measured lines and UTF-8 bytes, for example `245 lines, 12.0KB text`. Completed PDFs show known page counts and text size, such as `820 pages, 4.2MB text`, or `820 pages, no readable text`. Images keep their format and known byte-size summary. Failed or cancelled calls keep their failure status instead of a success summary.
+
+Measurements cover all accepted document text before either preview is built. Generated source/status/file-path metadata is excluded; document-internal headings, PDF page headings/separators and JSON payload whitespace are included. These are text sizes, not download or saved-file sizes. They do not change with expansion, terminal width or `fetchPreviewLines`. Line counts follow Pi's native convention: a final newline does not add an extra line. UI omission counts describe the existing preview selection separately.
+
+Historical results omit unknown totals; if no text measurements are known, the summary says `Text measurements unavailable`. The renderer does not read saved files or treat an old preview as the full document to reconstruct counts.
+
+Expanded fetch shows relevant metadata and a text preview. `fetchPreviewLines` defaults to 20 and limits only document content lines: half from the beginning, half from the end, with an exact `+N lines` marker for the omitted middle. Odd limits give the extra line to the beginning; 1 shows the first line only. Metadata, errors, saved-file references and the omission marker are outside that budget. Document-internal headings and blank lines count as content.
 
 With a positive limit, long preview lines are clipped to the available width with `...`; resizing recalculates the preview. Set `fetchPreviewLines` to `-1` to show all available text with normal wrapping. Metadata can still wrap, and image display is unchanged, so this is not a limit on the entire tool block's terminal height.
 

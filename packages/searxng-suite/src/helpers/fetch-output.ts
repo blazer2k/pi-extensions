@@ -225,6 +225,11 @@ export async function buildFetchOutput(
   maxSessionStorageBytes: number,
   signal?: AbortSignal,
 ): Promise<AgentToolResult<FetchToolDetails>> {
+  const kind = getExtractKind(result.contentType);
+  const measured =
+    signal?.aborted || kind === "image" || (kind === "json" && result.failure)
+      ? undefined
+      : truncateHead(getText(result.content).slice(result.bodyStart ?? 0));
   const details = {
     url: result.sourceUrl,
     finalUrl: result.finalUrl,
@@ -234,8 +239,11 @@ export async function buildFetchOutput(
     ...(result.failure && { incomplete: true }),
     ...(result.stopReason && { stopReason: result.stopReason }),
     ...(result.pdfPages && { pdfPages: result.pdfPages }),
+    ...(measured && {
+      textLines: measured.totalLines,
+      textBytes: measured.totalBytes,
+    }),
   };
-  const kind = getExtractKind(result.contentType);
   const sourceInfo =
     kind === "json" || result.failure
       ? [

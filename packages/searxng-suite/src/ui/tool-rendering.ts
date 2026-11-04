@@ -11,7 +11,6 @@ import type {
   SearchToolDetails,
   FetchToolDetails,
 } from "../tools/types";
-import { getExtractTextLength } from "../extractors/shared";
 
 interface ToolStatusDetails {
   status: ToolStatus;
@@ -31,15 +30,6 @@ export function getToolFailureStatus(
   }
 
   return null;
-}
-
-export function getApproxTokens(charCount: number): string {
-  const rawTokenCount = Math.ceil(charCount / 4);
-
-  const tokenCount =
-    rawTokenCount < 1000 ? rawTokenCount : Math.ceil(rawTokenCount / 100) * 100;
-
-  return tokenCount < 1000 ? tokenCount.toString() : `${tokenCount / 1000}k`;
 }
 
 export function buildToolCallText(
@@ -223,14 +213,24 @@ export function buildFetchContentSummary(
     return theme.fg("dim", `Image attached (.${format})${sizeText}`);
   }
 
-  const textLength = getExtractTextLength(result.content);
-
-  if (textLength === 0) {
-    return theme.fg("dim", "Empty");
+  const { textLines, textBytes, contentType, pdfPages } = result.details;
+  const parts: string[] = [];
+  if (contentType === "application/pdf") {
+    if (pdfPages?.total !== undefined) {
+      parts.push(
+        `${pdfPages.total} ${pdfPages.total === 1 ? "page" : "pages"}`,
+      );
+    }
+    if (textBytes !== undefined) {
+      parts.push(
+        textBytes === 0 ? "no readable text" : `${formatSize(textBytes)} text`,
+      );
+    }
+  } else {
+    if (textLines !== undefined) {
+      parts.push(`${textLines} ${textLines === 1 ? "line" : "lines"}`);
+    }
+    if (textBytes !== undefined) parts.push(`${formatSize(textBytes)} text`);
   }
-
-  return theme.fg(
-    "dim",
-    `${textLength} chars (~${getApproxTokens(textLength)} tokens)`,
-  );
+  return theme.fg("dim", parts.join(", ") || "Text measurements unavailable");
 }
