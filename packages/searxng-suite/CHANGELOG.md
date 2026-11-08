@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added permanent offline SearXNG tests and included them in the root test command, with Node transport/PDF worker checks, isolated settings/files, and source/packed loading coverage.
 - Updated workspace Pi dependencies to `1.5.0` and explicitly declared the package changelog path.
 - Renamed `web_extract` to `web_fetch`, without an old-name alias. Both tool labels and rendered headings are lowercase: `web search` and `web fetch`; optional capitalization is controlled by TUI Tweaks.
 - Simplified private API/tool module names and merged HTML-only content cleaning into the HTML extractor without changing extraction behavior.

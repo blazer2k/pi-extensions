@@ -8,11 +8,11 @@
   ],
   "scripts": {
     "check": "tsc --noEmit -p tsconfig.json",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,md}\"",
     "publish:pkgs": "npm publish --workspaces --access public",
     "publish:dry": "npm publish --workspaces --access public --dry-run",
-    "test": "bun test packages/pi-tui-tweaks"
+    "test": "node packages/searxng-suite/test/run.mjs packages/pi-tui-tweaks"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "*",

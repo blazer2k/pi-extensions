@@ -163,6 +163,14 @@ When enabled, the agent receives the category choices in the tool schema.
 
 Sizes follow Pi's 1024-based convention: 1 KB = 1024 bytes and 1 MB = 1,048,576 bytes. Displays use Pi's `KB`/`MB` labels and formatter.
 
+## Testing
+
+With the repository's existing Node and Bun development dependencies installed, run `npm test` from the repository root for both SearXNG and TUI Tweaks. For SearXNG alone, run `npm test --workspace=@blazer2k/searxng-suite` from the root or `npm test` from this package directory. Tests do not install dependencies or contact a live service.
+
+The runner isolates HOME, agent settings, configuration, temporary files and working directories, and removes its owned files afterward. Existing unit/rendering tests use Bun; transport, storage, worker and native-loader checks use Node's built-in test/assert APIs. Direct helper checks use Node's built-in TypeScript type stripping and a test-only relative-import resolver; registered tools use Pi's public resource loader. No build or loader dependency is added. Node test files run as separate direct entrypoints so test-CLI flags do not leak into PDF workers.
+
+HTTP and DNS responses are deterministic fixtures. Connector tests run actual Node Undici against controlled in-memory sockets; other TCP/TLS connections and listening sockets are blocked. PDF tests distinguish synthetic worker failures/stalls from actual unpdf conversion of the small local PDF fixtures. Packed-entry/reload checks use a local offline npm tarball and the already-installed dependencies. Tests and fixtures are excluded from the published package.
+
 ## License
 
 MIT – see [LICENSE](LICENSE)

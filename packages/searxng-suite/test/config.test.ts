@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { getDefaultConfig, validateConfig } from "../src/config/definition";
+import {
+  getDefaultConfig,
+  validateConfig,
+  type Config,
+} from "../src/config/definition";
 import { getConfig, loadConfig } from "../src/config/store";
 
 describe("fetchPreviewLines config", () => {
@@ -98,4 +102,105 @@ describe("fetchPreviewLines config", () => {
       });
     }
   });
+});
+
+describe("strict field repair", () => {
+  it("removes obsolete names without turning them into permissions", () => {
+    expect(
+      validateConfig({
+        limit: 1,
+        llmCanOverrideLimit: true,
+        llmCanPickCategory: true,
+        verbose: true,
+      }),
+    ).toEqual(getDefaultConfig());
+  });
+  it("keeps the complete defaults stable and independent", () => {
+    expect(getDefaultConfig()).toEqual({
+      maxResults: 10,
+      agentCanLimitResults: false,
+      timeoutMs: 180000,
+      pdfProcessingTimeoutMs: 300000,
+      maxContentBytes: 104857600,
+      maxSessionStorageBytes: 1073741824,
+      safesearch: 0,
+      agentCanPickCategory: false,
+      allowPrivateUrls: false,
+      fetchPreviewLines: 20,
+    });
+    const defaults = getDefaultConfig();
+    defaults.maxResults = 1;
+    expect(getDefaultConfig().maxResults).toBe(10);
+  });
+  for (const raw of [null, [], "{}", 7, false, undefined]) {
+    it(`repairs root ${String(raw)}`, () =>
+      expect(validateConfig(raw)).toEqual(getDefaultConfig()));
+  }
+  it("drops prototype-shaped unknown keys without granting permissions", () => {
+    const raw = JSON.parse(
+      '{"__proto__":{"allowPrivateUrls":true},"constructor":{"prototype":{"agentCanPickCategory":true}}}',
+    );
+    expect(validateConfig(raw)).toEqual(getDefaultConfig());
+    expect({}).not.toHaveProperty("allowPrivateUrls");
+    expect({}).not.toHaveProperty("agentCanPickCategory");
+  });
+  const siblings: Config = {
+    ...getDefaultConfig(),
+    maxResults: 37,
+    timeoutMs: 1000.5,
+    safesearch: 2,
+    agentCanPickCategory: true,
+    agentCanLimitResults: true,
+    allowPrivateUrls: true,
+    fetchPreviewLines: 5,
+  };
+  const ranges = {
+    maxResults: { good: [1, 51, 100000], bad: [0, -1, 1.1] },
+    timeoutMs: { good: [1000, 1000.5, 2147483647], bad: [999, 2147483648] },
+    pdfProcessingTimeoutMs: {
+      good: [1, 2147483647],
+      bad: [0, 1.5, 2147483648],
+    },
+    maxContentBytes: {
+      good: [1, Number.MAX_SAFE_INTEGER],
+      bad: [0, 1.5, Number.MAX_SAFE_INTEGER + 1],
+    },
+    maxSessionStorageBytes: {
+      good: [1, Number.MAX_SAFE_INTEGER],
+      bad: [0, 1.5, Number.MAX_SAFE_INTEGER + 1],
+    },
+    safesearch: { good: [0, 1, 2], bad: [-1, 3, 0.5] },
+    agentCanLimitResults: { good: [false, true], bad: [0, 1] },
+    agentCanPickCategory: { good: [false, true], bad: [0, 1] },
+    allowPrivateUrls: { good: [false, true], bad: [0, 1] },
+  };
+  for (const [key, { good, bad }] of Object.entries(ranges)) {
+    it(`preserves valid ${key} values`, () => {
+      for (const value of good)
+        expect(
+          validateConfig({ [key]: value })[key as keyof typeof ranges],
+        ).toBe(value);
+    });
+    it(`repairs invalid ${key} without coercion or changing valid siblings`, () => {
+      for (const value of [
+        ...bad,
+        "1",
+        "true",
+        null,
+        [],
+        {},
+        NaN,
+        Infinity,
+        -Infinity,
+        ...(typeof good[0] === "number" ? [true, false] : []),
+      ]) {
+        const raw: Record<string, unknown> = { ...siblings, [key]: value };
+        expect(validateConfig(raw)).toEqual({
+          ...siblings,
+          [key]: getDefaultConfig()[key as keyof typeof ranges],
+        });
+        expect(raw[key]).toBe(value);
+      }
+    });
+  }
 });

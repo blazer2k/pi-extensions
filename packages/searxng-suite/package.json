@@ -42,6 +42,9 @@
     "@earendil-works/pi-tui": "*",
     "typebox": "*"
   },
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
   "devDependencies": {
     "@types/turndown": "^5.0.6"
   },
