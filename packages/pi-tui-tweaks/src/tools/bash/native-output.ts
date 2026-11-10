@@ -2,7 +2,7 @@ import { normalizeOutput } from "../rendering/text";
 import type { BashToolDetails } from "@earendil-works/pi-coding-agent";
 
 const BASH_STATUS_PATTERN =
-  /^(?:Command exited with code \d+|Command terminated without an exit code|Command timed out after .+ seconds|Command aborted)$/;
+  /^(?:Command exited with code \d+|Command terminated without an exit code|Command timed out after .+ seconds(?:\. The shell exited .+)?|Command aborted)$/;
 
 export function parseBashErrorText(text: string): {
   output: string;

@@ -378,6 +378,54 @@ describe("bash renderResult", () => {
     expect(result).toEqual(snapshot);
   });
 
+  it("renders native timeout statuses as the status row", async () => {
+    // The second shell exits while a bounded background writer keeps the
+    // output pipe busy, so Pi appends the shell's real exit code.
+    const cases = [
+      ["echo started; sleep 2", /^Command timed out after 0\.3 seconds$/],
+      [
+        "(i=0; while [ $i -lt 100 ]; do echo tick; sleep 0.02; i=$((i+1)); done) & echo started; exit 3",
+        /^Command timed out after 0\.3 seconds\. The shell exited with code 3 /,
+      ],
+    ] as const;
+
+    for (const [command, expectedStatus] of cases) {
+      let errorText = "";
+
+      try {
+        await createBashToolDefinition(process.cwd()).execute(
+          "timeout-call",
+          { command, timeout: 0.3 },
+          undefined,
+          undefined,
+          {
+            cwd: process.cwd(),
+            sessionManager: {
+              getSessionId: () => "bash-test-session",
+              getSessionFile: () => undefined,
+            },
+          } as unknown as ExtensionToolContext,
+        );
+      } catch (error) {
+        errorText = error instanceof Error ? error.message : String(error);
+      }
+
+      const status = errorText.split("\n").at(-1) ?? "";
+      expect(status).toMatch(expectedStatus);
+
+      const component = patchBashTool().renderResult!(
+        { content: [{ type: "text", text: errorText }], details: undefined },
+        { expanded: false, isPartial: false },
+        mkTheme(),
+        mkToolCtx({ toolCallId: "timeout-call", isError: true, state: {} }),
+      );
+      const text = stripAnsi(component.render(400).join("\n"));
+
+      expect(text).toContain("started");
+      expect(text).toContain(`─ ${status}`);
+    }
+  });
+
   it("puts duration before truncation metadata", () => {
     const def = setupBashTool();
     const renderResult = def.renderResult!;
