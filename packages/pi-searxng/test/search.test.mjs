@@ -92,6 +92,16 @@ test("diagnostics/hints have bounded counts and sanitized lengths", async () => 
   assert(result.details.warnings.every((item) => item.length < 270));
   assert.equal((text(result).match(/s;/g) ?? []).length, 4);
 });
+test("shortened text never ends in half of an emoji", async () => {
+  state.fetch = async () =>
+    Response.json({
+      results: [],
+      suggestions: ["s".repeat(199) + "\u{1F600} tail"],
+    });
+  const result = await search.execute("emoji", { query: "emoji" });
+  assert(text(result).isWellFormed());
+  assert.match(text(result), /Suggestions: s{199}\.\.\./);
+});
 for (const raw of [
   null,
   {},

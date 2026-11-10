@@ -17,6 +17,7 @@ Versions up to `0.2.3` were published as `@blazer2k/searxng-suite`.
 - Use bold tool titles and host-configured expand/collapse hints without bolding arguments. Incomplete call arguments no longer render a literal `undefined`.
 - Simplified private search/fetch modules and kept HTML cleaning inside its extractor. Updated workspace Pi dependencies to 1.5.1 and declared the changelog path explicitly.
 - Added permanent offline tests to the root/package commands, including Node connectors/workers, renderer IO and credential checks, reproducible PDF fixtures and isolated source/packed loading. Documented current settings, previews, files, limits and validation workflow. Replaced the README screenshot with a recording and updated the package image; images are no longer shipped in the npm package.
+- Shortened titles, snippets, and error messages no longer end in half of an emoji.
 
 ## [0.2.2] – 2026-05-17
 

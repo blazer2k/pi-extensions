@@ -75,5 +75,6 @@ export function limitExtractContent(
 export function truncateContent(content: string, maxChars: number): string {
   if (content.length <= maxChars) return content;
 
-  return `${content.slice(0, maxChars)}...`;
+  // A cut inside a surrogate pair would leave half of an emoji behind.
+  return `${content.slice(0, maxChars).replace(/[\uD800-\uDBFF]$/, "")}...`;
 }
