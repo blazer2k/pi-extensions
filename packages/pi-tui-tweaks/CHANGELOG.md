@@ -2,6 +2,16 @@
 
 The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
+## [0.2.2] - 2026-11-10
+
+**Changed**
+
+- Tested with Pi `1.5.1`. The minimum supported version remains `1.5.0`.
+
+**Fixed**
+
+- Fixed Bash timeout results on Pi `1.5.1` being shown as a collapsed error when background processes kept writing output after the shell exited. The output and Pi's full status are shown normally.
+
 ## [0.2.1] - 2026-11-04
 
 **Changed**

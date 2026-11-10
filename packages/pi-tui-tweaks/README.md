@@ -116,7 +116,7 @@ Compact editor with `editor.color: "thinking"`, square tool-tree connectors, and
 
 ## Compatibility
 
-Requires Pi `1.5.0` or newer. Tested with Pi `1.5.0`.
+Requires Pi `1.5.0` or newer. Tested with Pi `1.5.1`.
 
 Tools that draw their entire tool-call block keep their own layout.
 
