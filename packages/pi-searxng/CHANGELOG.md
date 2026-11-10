@@ -1,7 +1,10 @@
 # Changelog
 
+Versions up to `0.2.3` were published as `@blazer2k/searxng-suite`.
+
 ## [Unreleased]
 
+- Renamed the package from `@blazer2k/searxng-suite` to `@blazer2k/pi-searxng`. Remove the old package and install the new one.
 - Renamed `web_extract` to `web_fetch` without an alias. Native labels/headings are lowercase `web search` and `web fetch`.
 - Replaced `/search-config` with file-based `pi-searxng.json` settings. Invalid fields are repaired independently, read failures do not overwrite the file, and schemas/settings refresh at startup or `/reload`. Old names/files are not migrated. Agent result-limit and category permissions default to false; supported categories are `general`, `news`, `science` and `videos`.
 - Removed `verbose` in favor of Pi's native expansion state. Expanded search keeps all returned entries and diagnostics. Added fetch-only `fetchPreviewLines` (20 by default) with head/tail lines, exact omissions, width clipping and `-1` for all available returned text. Display changes do not load files or alter model output.

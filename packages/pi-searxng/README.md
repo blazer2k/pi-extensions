@@ -1,4 +1,4 @@
-# SearXNG Suite
+# Pi SearXNG
 
 Web search through your [SearXNG](https://searxng.org) instance and URL fetching for [Pi](https://pi.dev).
 
@@ -11,14 +11,14 @@ This extension adds:
 - Complete output for large pages and documents. A result too big to return inline is saved to a file first, and the agent gets a preview with the path. Completed PDF downloads are kept as files.
 - Compact summaries with measured sizes, such as `460 lines, 13.1KB text`, that expand with Pi's own shortcut.
 
-![Pi searching the Elysia docs with web search, reading a page with web fetch, then adding the endpoint and passing the tests](https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/searxng-suite/media/docs-lookup.gif)
+![Pi searching the Elysia docs with web search, reading a page with web fetch, then adding the endpoint and passing the tests](https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/pi-searxng/media/docs-lookup.gif)
 
 The recording also uses [Pi TUI Tweaks](https://github.com/blazer2k/pi-extensions/tree/main/packages/pi-tui-tweaks) for the compact tool layout. This package does not change how Pi looks.
 
 ## Installation
 
 ```bash
-pi install npm:@blazer2k/searxng-suite
+pi install npm:@blazer2k/pi-searxng
 ```
 
 For local development:
@@ -27,7 +27,7 @@ For local development:
 git clone https://github.com/blazer2k/pi-extensions.git
 cd pi-extensions
 npm install
-pi -e ./packages/searxng-suite/src/index.ts
+pi -e ./packages/pi-searxng/src/index.ts
 ```
 
 The extension needs a running SearXNG instance with the JSON format enabled under `search.formats` in its `settings.yml`. See SearXNG's [Search API](https://docs.searxng.org/dev/search_api.html) documentation.

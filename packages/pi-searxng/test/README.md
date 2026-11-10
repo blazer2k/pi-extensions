@@ -4,12 +4,12 @@ Install the repository's declared development dependencies before running tests.
 
 ```bash
 npm test
-npm test --workspace=@blazer2k/searxng-suite
+npm test --workspace=@blazer2k/pi-searxng
 npm run check
 npm run format:check
 ```
 
-The first command includes the unchanged TUI Tweaks suite. The workspace command runs SearXNG only; `npm test` from `packages/searxng-suite` does the same. Neither test command installs dependencies or contacts a live service/model. They run with the Node executable that launches the runner and the existing Bun development dependency.
+The first command includes the unchanged TUI Tweaks suite. The workspace command runs SearXNG only; `npm test` from `packages/pi-searxng` does the same. Neither test command installs dependencies or contacts a live service/model. They run with the Node executable that launches the runner and the existing Bun development dependency.
 
 ## Isolation and runners
 

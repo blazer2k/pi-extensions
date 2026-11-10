@@ -1,7 +1,7 @@
 {
-  "name": "@blazer2k/searxng-suite",
+  "name": "@blazer2k/pi-searxng",
   "version": "0.2.3",
-  "description": "SearXNG-based web search with category filtering and multi-format URL extraction for pi.",
+  "description": "Web search through your SearXNG instance and URL fetching for Pi.",
   "type": "module",
   "keywords": [
     "pi",
@@ -15,12 +15,12 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/blazer2k/pi-extensions.git",
-    "directory": "packages/searxng-suite"
+    "directory": "packages/pi-searxng"
   },
   "bugs": {
     "url": "https://github.com/blazer2k/pi-extensions/issues"
   },
-  "homepage": "https://github.com/blazer2k/pi-extensions/tree/main/packages/searxng-suite#readme",
+  "homepage": "https://github.com/blazer2k/pi-extensions/tree/main/packages/pi-searxng#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -55,6 +55,6 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/searxng-suite/images/bg.jpg"
+    "image": "https://raw.githubusercontent.com/blazer2k/pi-extensions/main/packages/pi-searxng/images/bg.jpg"
   }
 }

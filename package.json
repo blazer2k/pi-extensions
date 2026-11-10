@@ -12,7 +12,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,md}\"",
     "publish:pkgs": "npm publish --workspaces --access public",
     "publish:dry": "npm publish --workspaces --access public --dry-run",
-    "test": "node packages/searxng-suite/test/run.mjs packages/pi-tui-tweaks"
+    "test": "node packages/pi-searxng/test/run.mjs packages/pi-tui-tweaks"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "*",
@@ -23,7 +23,7 @@
   },
   "pi": {
     "extensions": [
-      "packages/searxng-suite/src/index.ts",
+      "packages/pi-searxng/src/index.ts",
       "packages/pi-personality/src/index.ts",
       "packages/pi-tui-tweaks/index.ts"
     ]
