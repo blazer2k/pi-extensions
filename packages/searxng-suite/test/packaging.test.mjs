@@ -43,7 +43,7 @@ test(
     assert(
       paths.every(
         (path) =>
-          !/(?:^|\/)(?:test|fixtures|node_modules)(?:\/|$)|DO-NOT-COMMIT|\.test\./.test(
+          !/(?:^|\/)(?:test|fixtures|media|images|node_modules)(?:\/|$)|DO-NOT-COMMIT|\.test\./.test(
             path,
           ),
       ),
