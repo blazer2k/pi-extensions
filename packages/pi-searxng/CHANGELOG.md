@@ -2,22 +2,51 @@
 
 Versions up to `0.2.3` were published as `@blazer2k/searxng-suite`.
 
-## [Unreleased]
+## [0.3.0] - 2026-11-10
+
+**Breaking changes**
 
 - Renamed the package from `@blazer2k/searxng-suite` to `@blazer2k/pi-searxng`. Remove the old package and install the new one.
-- Renamed `web_extract` to `web_fetch` without an alias. Native labels/headings are lowercase `web search` and `web fetch`.
-- Replaced `/search-config` with file-based `pi-searxng.json` settings. Invalid fields are repaired independently, read failures do not overwrite the file, and schemas/settings refresh at startup or `/reload`. Old names/files are not migrated. Agent result-limit and category permissions default to false; supported categories are `general`, `news`, `science` and `videos`.
-- Removed `verbose` in favor of Pi's native expansion state. Expanded search keeps all returned entries and diagnostics. Added fetch-only `fetchPreviewLines` (20 by default) with head/tail lines, exact omissions, width clipping and `-1` for all available returned text. Display changes do not load files or alter model output.
-- Replaced character/token estimates with measured accepted-text lines and UTF-8 sizes. PDF summaries use known page counts and text size or report no readable text. Generated metadata is excluded and unknown historical measurements are omitted.
-- Added validated `application/json` fetching without re-serialization. Whitespace, duplicate keys, escapes and number spellings are retained; one leading UTF-8 BOM is removed. Invalid/oversized JSON does not produce partial JSON files.
-- Save oversized accepted text before returning a bounded inline preview and actual file path. Save every completed PDF original unchanged before conversion, including when text is empty or conversion fails. Incomplete conversions remain native errors, with clearly labeled partial text when saving succeeds. Completed files survive reload while retained in temporary storage.
-- Added shared fetch download/accepted-text and session-storage byte budgets, streamed PDF downloads and sequential PDF processing in an interruptible Node worker. Processing timeout/cancellation awaits worker exit; progress distinguishes processed and accepted pages. There is no page cap or hard process-memory guarantee; larger resource defaults remain provisional.
-- Enforced body timeouts and actual arriving-byte limits. Fetch validates public destinations and redirects, passes checked DNS answers to the connection and keeps search authentication separate. HTML links use the final URL; conservative cleaning preserves article/reference/discussion content.
-- Preserve bounded search engine diagnostics, suggestions and corrections before result limiting. Failures keep native error/cancellation status and do not stringify arbitrary abort reasons. Saving failures do not claim complete files.
-- Use bold tool titles and host-configured expand/collapse hints without bolding arguments. Incomplete call arguments no longer render a literal `undefined`.
-- Simplified private search/fetch modules and kept HTML cleaning inside its extractor. Updated workspace Pi dependencies to 1.5.1 and declared the changelog path explicitly.
-- Added permanent offline tests to the root/package commands, including Node connectors/workers, renderer IO and credential checks, reproducible PDF fixtures and isolated source/packed loading. Documented current settings, previews, files, limits and validation workflow. Replaced the README screenshot with a recording and updated the package image; images are no longer shipped in the npm package.
+- Renamed the `web_extract` tool to `web_fetch`. There is no alias.
+- Replaced the `/search-config` command with the `pi-searxng.json` settings file. Edit the file and use Pi's `/reload`; settings load only at startup and on reload. The old `pi-searxng-suite.json` file is ignored; settings are not migrated automatically.
+- Renamed `limit` to `maxResults`, `llmCanOverrideLimit` to `agentCanLimitResults`, and `llmCanPickCategory` to `agentCanPickCategory`. Category selection is now off by default and limited to `general`, `news`, `science`, and `videos`.
+- Removed the `verbose` setting. Results expand and collapse with Pi's own shortcut.
+- Pi `1.5.0` and Node.js `22.19.0` are now the minimum supported versions.
+
+**Added**
+
+- `web_fetch` returns `application/json` responses as their original text, without re-serialization.
+- Output too large to return inline is saved to a file in full, and the agent gets a preview with the path.
+- Every completed PDF download is kept as `original.pdf`, including when its text cannot be extracted.
+- Search results include SearXNG's engine warnings, corrections, and suggestions.
+- `fetchPreviewLines` sets how many content lines an expanded fetch shows, taken from the beginning and the end.
+- `pdfProcessingTimeoutMs` and `maxSessionStorageBytes` limit PDF conversion time and the space used by saved files.
+
+**Changed**
+
+- Collapsed fetch results show measured lines and sizes instead of estimated tokens. PDFs show their page count.
+- One `maxContentBytes` limit, 100 MB by default, replaces the fixed download limits per format.
+- PDFs are downloaded to disk and converted page by page in a separate worker, which stops on timeout or cancellation.
+- The default network timeout is now 180 seconds instead of 15.
+- Tool titles are bold, like Pi's built-in tools.
+- Declared the package changelog path so Pi can show release notes after updates.
+- Reworked the README with a recording and a new package image. Media stays in the repository and is excluded from the npm package.
+
+**Fixed**
+
+- Timeouts cover the whole response body, and size limits apply to the bytes actually received.
+- `web_fetch` checks resolved addresses and every redirect against the private-address rules.
+- Links in converted HTML resolve against the final URL after redirects.
+- HTML cleaning no longer removes article, reference, or discussion content together with navigation.
+- Failed, timed-out, and cancelled calls keep Pi's error status instead of returning as ordinary results.
+- Expand and collapse hints follow Pi's configured keybindings.
 - Shortened titles, snippets, and error messages no longer end in half of an emoji.
+
+## [0.2.3] – 2026-06-11
+
+### Fixed
+
+- Guard against `null`/`undefined` `query` in `buildToolCallText` — prevents rendering the literal string `"undefined"` in tool call text
 
 ## [0.2.2] – 2026-05-17
 

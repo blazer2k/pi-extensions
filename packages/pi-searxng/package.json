@@ -1,6 +1,6 @@
 {
   "name": "@blazer2k/pi-searxng",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Web search through your SearXNG instance and URL fetching for Pi.",
   "type": "module",
   "keywords": [
