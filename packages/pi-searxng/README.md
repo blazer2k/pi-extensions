@@ -116,7 +116,7 @@ Search results, fetched pages, and saved files are untrusted input, and the tool
 
 ## Compatibility
 
-Requires Pi `1.5.0` or newer and Node.js `22.19.0` or newer. Tested with Pi `1.5.1`.
+Requires Pi `1.5.0` or newer and Node.js `22.19.0` or newer. Tested with Pi `1.5.2`.
 
 ## License
 
