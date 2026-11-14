@@ -39,7 +39,9 @@ test(
     assert.equal(packed.version, manifest.version);
     const paths = packed.files.map((item) => item.path);
     assert(paths.includes("src/extractors/pdf-worker.mjs"));
-    assert(paths.includes("src/index.ts"));
+    assert.deepEqual(manifest.pi.extensions, ["./index.ts"]);
+    assert(paths.includes("index.ts"));
+    assert(!paths.includes("src/index.ts"));
     assert(
       paths.every(
         (path) =>

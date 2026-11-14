@@ -1,8 +1,8 @@
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { loadConfig } from "./config/store";
-import { registerSearchTool } from "./tools/search";
-import { registerFetchTool } from "./tools/fetch";
-import { errorMessage } from "./helpers/error";
+import { loadConfig } from "./src/config/store";
+import { registerSearchTool } from "./src/tools/search";
+import { registerFetchTool } from "./src/tools/fetch";
+import { errorMessage } from "./src/helpers/error";
 
 export default function (pi: ExtensionAPI) {
   const configErrors: unknown[] = [];

@@ -17,7 +17,7 @@ export const context = (id = randomUUID()) => ({
 });
 export async function tools(
   config = {},
-  entry = new URL("../src/index.ts", import.meta.url),
+  entry = new URL("../index.ts", import.meta.url),
   extra = [],
 ) {
   await writeFile(process.env.PI_SEARXNG_CONFIG_PATH, JSON.stringify(config));

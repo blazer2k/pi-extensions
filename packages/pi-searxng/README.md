@@ -27,7 +27,7 @@ For local development:
 git clone https://github.com/blazer2k/pi-extensions.git
 cd pi-extensions
 npm install
-pi -e ./packages/pi-searxng/src/index.ts
+pi -e ./packages/pi-searxng/index.ts
 ```
 
 The extension needs a running SearXNG instance with the JSON format enabled under `search.formats` in its `settings.yml`. See SearXNG's [Search API](https://docs.searxng.org/dev/search_api.html) documentation.

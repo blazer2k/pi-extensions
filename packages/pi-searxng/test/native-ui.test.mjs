@@ -53,7 +53,7 @@ for (const wrapped of [false, true])
       );
       const registered = await tools(
         { fetchPreviewLines: 4, maxResults: 12 },
-        new URL("../src/index.ts", import.meta.url),
+        new URL("../index.ts", import.meta.url),
         wrapped
           ? [
               fileURLToPath(

@@ -23,7 +23,7 @@
   },
   "pi": {
     "extensions": [
-      "packages/pi-searxng/src/index.ts",
+      "packages/pi-searxng/index.ts",
       "packages/pi-personality/src/index.ts",
       "packages/pi-tui-tweaks/index.ts"
     ]
