@@ -97,7 +97,10 @@ function nativeCodemode(): ToolDefinition {
   return definition;
 }
 const adapterOptions = { isToolCallActive: () => false, reportIssue: () => {} };
-function text(component: { render(width: number): string[] }, width = 160) {
+function text(
+  component: { render(width: number): readonly string[] },
+  width = 160,
+) {
   return stripAnsi(component.render(width).join("\n"));
 }
 function label(name: string, enabled: boolean) {

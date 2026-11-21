@@ -269,6 +269,29 @@ describe("read renderResult", () => {
     expect(output).toContain("Image (640x480)");
   });
 
+  it("shows the model's image warning collapsed and expanded", () => {
+    const renderResult = setupReadTool().renderResult!;
+    for (const expanded of [false, true]) {
+      const component = renderResult(
+        {
+          content: [
+            { type: "image", data: "image-data", mimeType: "image/png" },
+          ],
+          details: { imageUnsupportedByModel: "text-only-model" },
+        },
+        { expanded, isPartial: false },
+        mkTheme(),
+        mkToolCtx({ expanded }),
+      );
+
+      const output = component.render(120).join("\n");
+      expect(output).toContain(
+        "text-only-model does not support images; it saw a placeholder instead",
+      );
+      expect(output).toContain("╰─ Image");
+    }
+  });
+
   it("reports image processing failures instead of text lines", () => {
     const def = setupReadTool();
     const renderResult = def.renderResult!;

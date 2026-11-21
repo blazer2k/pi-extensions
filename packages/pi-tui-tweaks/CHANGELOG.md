@@ -2,6 +2,16 @@
 
 The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
+## [Unreleased]
+
+**Changed**
+
+- Updated renderer compatibility for Pi `1.6.0`.
+
+**Fixed**
+
+- Read shows Pi's warning when the selected model does not support images.
+
 ## [0.2.2] - 2026-11-10
 
 **Changed**

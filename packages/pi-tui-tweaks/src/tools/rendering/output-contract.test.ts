@@ -24,7 +24,7 @@ import { patchWriteTool } from "../write";
 import { clearBlinkTimers } from "./state";
 import { stripAnsi } from "./text";
 
-type Renderable = { render(width: number): string[] };
+type Renderable = { render(width: number): readonly string[] };
 type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
   details: unknown;

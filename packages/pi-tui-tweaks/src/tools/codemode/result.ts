@@ -28,7 +28,7 @@ export function formatCodemodeResult(
   width: number,
   durationMs: number | undefined,
   keyText: KeybindingHints["keyText"],
-  nativeLines?: string[],
+  nativeLines?: readonly string[],
   cwd = process.cwd(),
 ) {
   const data = buildCodemodeResultView(result);

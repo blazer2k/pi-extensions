@@ -108,7 +108,7 @@ export function createCodemodeRenderers(
       text.setText((width) => {
         const previous = state.resultExpandable === true;
         try {
-          let nativeLines: string[] | undefined;
+          let nativeLines: readonly string[] | undefined;
           if (options.expanded) {
             try {
               nativeLines = nativeResult?.render(Math.max(1, width - 3));

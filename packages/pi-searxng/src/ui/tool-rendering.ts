@@ -100,7 +100,7 @@ class FetchPreviewText extends Text {
   constructor(private readonly buildText: (width: number) => string) {
     super("", 0, 0);
   }
-  override render(width: number): string[] {
+  override render(width: number) {
     this.setText(this.buildText(width));
     return super.render(width);
   }

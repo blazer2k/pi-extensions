@@ -873,7 +873,7 @@ describe("public renderer integration", () => {
     };
     let baseline:
       | {
-          terminal: string[][];
+          terminal: (readonly string[])[];
           html: Awaited<ReturnType<typeof exportData>>["renderedTools"][string];
         }
       | undefined;
@@ -939,7 +939,7 @@ describe("public renderer integration", () => {
         const component = toolComponent(session, name, args, id);
         component.setArgsComplete();
         component.updateResult(result);
-        const terminal: string[][] = [];
+        const terminal: (readonly string[])[] = [];
         for (const expanded of [false, true]) {
           component.setExpanded(expanded);
           const lines = component.render(80);
@@ -1088,7 +1088,9 @@ describe("public renderer integration", () => {
             ).toHaveLength(1);
             const imageLines = image.render(80);
             expect(imageLines.length).toBeGreaterThan(0);
-            expect(lines.slice(-imageLines.length)).toEqual(imageLines);
+            expect<readonly string[]>(lines.slice(-imageLines.length)).toEqual(
+              imageLines,
+            );
             expect(lines.map(stripAnsi).join("\n")).toContain(
               isPartial ? "partial image" : "final image",
             );

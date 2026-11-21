@@ -77,12 +77,26 @@ export function formatReadResult(
     keyText,
   );
   const imageMarker = getImageReadMarker(textContent);
+  let imageWarning = "";
 
   if (hasImage) {
     const match = textContent.match(/original\s+(\d+)x(\d+)/i);
     metadataParts.push(
       theme.fg("muted", match ? `Image (${match[1]}x${match[2]})` : "Image"),
     );
+    const unsupportedBy = (
+      result.details as { imageUnsupportedByModel?: unknown } | undefined
+    )?.imageUnsupportedByModel;
+    if (typeof unsupportedBy === "string" && unsupportedBy) {
+      const model = sanitizeDisplayText(unsupportedBy);
+      imageWarning =
+        theme.fg("dim", "│  ") +
+        theme.fg(
+          "warning",
+          `[${model} does not support images; it saw a placeholder instead]`,
+        ) +
+        "\n";
+    }
   } else if (imageMarker) {
     metadataParts.push(theme.fg("warning", "Image unavailable"));
     const summary = metadataParts.join(theme.fg("muted", " · ")) + callHint;
@@ -107,6 +121,7 @@ export function formatReadResult(
   }
 
   return (
+    imageWarning +
     theme.fg("dim", getTreeEndPrefix()) +
     metadataParts.join(theme.fg("muted", " · ")) +
     callHint

@@ -50,7 +50,10 @@ function wrap(definition: ToolDefinition) {
     reportIssue() {},
   });
 }
-function plain(component: { render(width: number): string[] }, width = 80) {
+function plain(
+  component: { render(width: number): readonly string[] },
+  width = 80,
+) {
   return component.render(width).map(stripAnsi).join("\n");
 }
 const result = {

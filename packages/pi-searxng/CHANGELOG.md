@@ -6,6 +6,7 @@ Versions up to `0.2.3` were published as `@blazer2k/searxng-suite`.
 
 **Changed**
 
+- Updated renderer compatibility for Pi `1.6.0`.
 - Moved the extension entry point from `src/index.ts` to package-root `index.ts`, so Pi displays `pi-searxng` instead of `pi-searxng/src`. Update local extension paths and resource filters that still reference the old entry.
 
 ## [0.3.0] - 2026-11-10
