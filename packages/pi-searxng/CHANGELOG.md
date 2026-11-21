@@ -2,7 +2,7 @@
 
 Versions up to `0.2.3` were published as `@blazer2k/searxng-suite`.
 
-## [Unreleased]
+## [0.3.1] - 2026-11-21
 
 **Changed**
 

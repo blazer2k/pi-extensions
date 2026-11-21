@@ -2,7 +2,7 @@
 
 The initial `0.1.0` release was published as `@blazer2k/pi-ui-enhancements`.
 
-## [Unreleased]
+## [0.2.3] - 2026-11-21
 
 **Changed**
 
